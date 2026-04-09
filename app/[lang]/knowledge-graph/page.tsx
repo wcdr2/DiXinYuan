@@ -20,17 +20,17 @@ export default async function GraphPage({ params }: GraphPageProps) {
   const articles = getArticles();
   const legendTypes = (["policy", "enterprise", "institution", "university", "park", "project", "technology", "region"] as EntityType[])
     .filter((type) => graph.entities.some((entity) => entity.type === type));
-  const guideCards =
+  const chainCards =
     lang === "zh"
       ? [
-          { title: "节点类型", body: "政策、企业、机构、高校、园区、项目、技术与地区按颜色区分。" },
-          { title: "关系来源", body: "每条关系都由新闻证据支撑，并在右侧面板中可追溯。" },
-          { title: "交互方式", body: "点击节点切换焦点，使用顶部类型筛选快速缩小图谱范围。" },
+          { title: "上游数据与感知", body: "以遥感、北斗、测绘和低空感知为代表，承担产业链的数据获取与基础感知能力。" },
+          { title: "中游平台与智能", body: "以 GIS 时空平台、实景三维、GeoAI 和数字孪生为核心，形成平台化与智能化能力层。" },
+          { title: "下游场景与产业", body: "围绕自然资源治理、海洋港航、低空经济和园区企业集群，构成广西落地应用场景。" },
         ]
       : [
-          { title: "Entity types", body: "Policies, enterprises, institutions, universities, parks, projects, technologies and regions use distinct colors." },
-          { title: "Evidence", body: "Every relation is backed by article evidence and can be traced from the side panel." },
-          { title: "Interaction", body: "Select a node to focus it, then use the type filter to narrow the graph." },
+          { title: "Upstream sensing", body: "Remote sensing, Beidou, surveying and low-altitude sensing provide the primary data-acquisition layer." },
+          { title: "Midstream platforms", body: "GIS platforms, real-scene 3D, GeoAI and digital twins form the core capability layer." },
+          { title: "Downstream scenarios", body: "Natural-resource governance, marine services, low-altitude economy and regional industry clusters make up the application layer." },
         ];
   const metricLabels =
     lang === "zh"
@@ -59,25 +59,25 @@ export default async function GraphPage({ params }: GraphPageProps) {
         </div>
       </section>
 
-      <section className="graph-page__overview">
-        <div className="card-panel graph-page__legend card-panel--soft">
-          <p className="section-kicker">Legend</p>
-          <h2>{lang === "zh" ? "图谱图例" : "Graph legend"}</h2>
-          <div className="graph-page__legend-grid">
-            {legendTypes.map((type) => (
-              <div key={type} className={`graph-page__legend-item graph-page__legend-item--${type}`}>
-                <span className="graph-page__legend-dot" aria-hidden="true" />
-                <strong>{entityTypeLabels[lang][type]}</strong>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="graph-page__guides">
-          {guideCards.map((card) => (
-            <article key={card.title} className="card-panel card-panel--soft graph-page__guide-card">
-              <h3>{card.title}</h3>
+      <section className="graph-page__chain">
+        <div className="graph-page__chain-grid">
+          {chainCards.map((card) => (
+            <article key={card.title} className="card-panel card-panel--soft graph-page__chain-card">
+              <h2>{card.title}</h2>
               <p>{card.body}</p>
             </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="graph-page__legend-strip card-panel card-panel--soft">
+        <p className="section-kicker">{lang === "zh" ? "图例" : "Legend"}</p>
+        <div className="graph-page__legend-grid graph-page__legend-grid--inline">
+          {legendTypes.map((type) => (
+            <div key={type} className={`graph-page__legend-item graph-page__legend-item--${type}`}>
+              <span className="graph-page__legend-dot" aria-hidden="true" />
+              <strong>{entityTypeLabels[lang][type]}</strong>
+            </div>
           ))}
         </div>
       </section>

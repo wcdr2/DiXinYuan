@@ -136,6 +136,53 @@ const listLikeUrlPatterns = [
   /\/xwzx\/?$/i,
 ];
 
+const blockedKeywordTerms = new Set([
+  "热点新闻",
+  "近日",
+  "详细内容",
+  "点击查看",
+  "更多内容",
+  "月份例行新闻发布",
+  "例行新闻发布会",
+  "能力提升",
+  "服务能力",
+  "平台能力",
+  "创新研究院",
+  "信息创新研究院",
+  "中国科学院",
+  "data",
+]);
+
+const blockedOriginalHosts = new Set(["gzw.gxzf.gov.cn", "gxt.gxzf.gov.cn"]);
+
+const industryChainBlueprint = [
+  { sourceEntityId: "remote-sensing", targetEntityId: "real-scene-3d", relationType: "supports", keywords: ["遥感", "卫星", "实景三维"] },
+  { sourceEntityId: "real-scene-3d", targetEntityId: "gis-platform", relationType: "supports", keywords: ["实景三维", "时空底座", "平台"] },
+  { sourceEntityId: "gis-platform", targetEntityId: "digital-twin", relationType: "supports", keywords: ["地理信息平台", "数字孪生", "时空平台"] },
+  { sourceEntityId: "geo-ai", targetEntityId: "digital-twin", relationType: "supports", keywords: ["GeoAI", "空间智能", "数字孪生"] },
+  { sourceEntityId: "beidou-application", targetEntityId: "low-altitude-economy", relationType: "supports", keywords: ["北斗", "低空经济", "高精度定位"] },
+  { sourceEntityId: "beidou-application", targetEntityId: "gx-beidou-park", relationType: "supports", keywords: ["北斗产业园", "北斗", "时空服务"] },
+  { sourceEntityId: "marine-service-scenarios", targetEntityId: "beibu-gulf", relationType: "located_in", keywords: ["北部湾", "海洋地理信息", "港航调度"] },
+  { sourceEntityId: "marine-service-scenarios", targetEntityId: "gis-platform", relationType: "supports", keywords: ["海洋地理信息服务", "服务平台", "平台"] },
+  { sourceEntityId: "gx-industry-policy", targetEntityId: "gx-gov-org", relationType: "guides", keywords: ["产业发展政策", "服务能力提升行动", "政策"] },
+  { sourceEntityId: "gx-industry-policy", targetEntityId: "gx-dnr-org", relationType: "guides", keywords: ["自然资源", "服务能力提升行动", "政策"] },
+  { sourceEntityId: "gx-industry-policy", targetEntityId: "gx-beidou-park", relationType: "guides", keywords: ["北斗产业园", "产业园", "政策"] },
+  { sourceEntityId: "gx-gov-org", targetEntityId: "guangxi", relationType: "located_in", keywords: ["广西"] },
+  { sourceEntityId: "gx-dnr-org", targetEntityId: "guangxi", relationType: "located_in", keywords: ["广西", "自然资源厅"] },
+  { sourceEntityId: "gx-beidou-park", targetEntityId: "guangxi", relationType: "located_in", keywords: ["广西", "北斗产业园"] },
+  { sourceEntityId: "natural-resource-governance", targetEntityId: "guangxi", relationType: "supports", keywords: ["自然资源", "国土空间", "广西"] },
+  { sourceEntityId: "gx-dnr-org", targetEntityId: "natural-resource-governance", relationType: "supports", keywords: ["自然资源", "国土空间", "项目用地"] },
+  { sourceEntityId: "aircas-org", targetEntityId: "remote-sensing", relationType: "supports", keywords: ["空天信息", "遥感", "卫星"] },
+  { sourceEntityId: "whu-org", targetEntityId: "geo-ai", relationType: "supports", keywords: ["空间智能", "智能测绘", "遥感"] },
+  { sourceEntityId: "supermap-org", targetEntityId: "gis-platform", relationType: "drives", keywords: ["GIS", "平台", "GeoAI"] },
+  { sourceEntityId: "supermap-org", targetEntityId: "digital-twin", relationType: "drives", keywords: ["digital twin", "数字孪生", "GeoAI"] },
+  { sourceEntityId: "cagis-org", targetEntityId: "guangxi-enterprise-cluster", relationType: "drives", keywords: ["产业", "企业", "地理信息企业"] },
+  { sourceEntityId: "csgpc-org", targetEntityId: "geo-ai", relationType: "supports", keywords: ["智能测绘", "时空信息", "空间智能"] },
+  { sourceEntityId: "guangxi-enterprise-cluster", targetEntityId: "gx-beidou-park", relationType: "related", keywords: ["产业园", "企业", "时空服务"] },
+  { sourceEntityId: "guangxi-enterprise-cluster", targetEntityId: "digital-twin", relationType: "drives", keywords: ["企业", "数字孪生", "平台"] },
+  { sourceEntityId: "low-altitude-economy", targetEntityId: "guangxi", relationType: "located_in", keywords: ["低空经济", "广西"] },
+];
+
 async function readJson(filePath) {
   const content = await readFile(filePath, "utf8");
   return JSON.parse(content.replace(/^\uFEFF/, ""));
@@ -161,6 +208,24 @@ function decodeHtmlEntities(value) {
     .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number.parseInt(dec, 10)));
 }
 
+const templateArtifactPattern = /(?:title|content|time)_(?:value|vaule)|['"`]\s*\+\s*[a-z_]{2,}\s*\+\s*['"`]?|\[\s*['"`]?\s*\+\s*[a-z_]{2,}\s*\+\s*['"`]?\s*\]/i;
+
+function stripTemplateArtifacts(value) {
+  return String(value ?? "")
+    .replace(/\[\s*['"`]?\s*\+\s*[a-z_]{2,}\s*\+\s*['"`]?\s*\]/gi, " ")
+    .replace(/['"`]?\s*\+\s*[a-z_]{2,}\s*\+\s*['"`]?/gi, " ")
+    .replace(/\b(?:title|content|time)_(?:value|vaule)\b/gi, " ");
+}
+
+function hasTemplateArtifacts(value) {
+  return templateArtifactPattern.test(String(value ?? ""));
+}
+
+function sanitizeArticleText(value) {
+  const noTemplate = stripTemplateArtifacts(value);
+  return cleanWhitespace(decodeHtmlEntities(stripTags(noTemplate)));
+}
+
 function slugify(value) {
   return cleanWhitespace(value)
     .toLowerCase()
@@ -174,10 +239,17 @@ function unique(values) {
 
 function splitKeywords(value) {
   return unique(
-    decodeHtmlEntities(value)
-      .split(/[;,，、|]/)
+    sanitizeArticleText(value)
+      .split(/[;,\uFF0C\u3001|]/)
       .map((item) => cleanWhitespace(item))
-      .filter((item) => item.length >= 2 && item.length <= 24),
+      .filter(
+        (item) =>
+          item.length >= 2 &&
+          item.length <= 24 &&
+          !hasTemplateArtifacts(item) &&
+          !blockedKeywordTerms.has(item) &&
+          !blockedKeywordTerms.has(item.toLowerCase()),
+      ),
   );
 }
 
@@ -205,19 +277,49 @@ function escapeRegExp(value) {
 }
 
 function cleanTitle(rawTitle, sourceName) {
-  let title = decodeHtmlEntities(stripTags(rawTitle));
+  let title = sanitizeArticleText(rawTitle);
   if (!title) {
     return "";
   }
 
   const escapedSource = escapeRegExp(sourceName);
-  title = title.replace(new RegExp(`\\s*[-|｜_].*${escapedSource}.*$`, "i"), "");
-  title = title.replace(/\s*[-|｜_].*$/, "");
-  return cleanWhitespace(title);
+  title = title.replace(new RegExp("\\s*[-|_].*" + escapedSource + ".*$", "i"), "");
+  title = title.replace(/\s*[-|_].*$/, "");
+  title = cleanWhitespace(title);
+
+  if (!title || hasTemplateArtifacts(title)) {
+    return "";
+  }
+
+  return title;
+}
+
+function cleanSummaryText(value) {
+  const summary = sanitizeArticleText(value).slice(0, 260);
+  if (!summary || summary.length < 12 || hasTemplateArtifacts(summary)) {
+    return "";
+  }
+
+  if (!/[A-Za-z0-9\u4e00-\u9fa5]/.test(summary)) {
+    return "";
+  }
+
+  return summary;
 }
 
 function pickFirst(...values) {
   return values.find((value) => cleanWhitespace(value));
+}
+
+function pickFirstSanitized(...values) {
+  for (const value of values) {
+    const cleaned = cleanSummaryText(value);
+    if (cleaned) {
+      return cleaned;
+    }
+  }
+
+  return "";
 }
 
 function getMetaContent(html, names) {
@@ -307,45 +409,77 @@ function detectGuangxi(article) {
   return guangxiTokens.some((token) => text.includes(token));
 }
 
-function extractKeywordCandidates(article) {
+function articleTextForMatching(article) {
+  return `${article.title} ${article.summary} ${(article.keywords ?? []).join(" ")} ${article.sourceName ?? ""} ${(article.regionTags ?? []).join(" ")}`;
+}
+
+function normalizeKeywordTerm(value) {
+  const normalizedSource = cleanWhitespace(String(value ?? ""))
+    .replace(/^[—-]+|[—-]+$/g, "")
+    .replace(/[：:，,。；;、]+$/g, "");
+  const term = /^[A-Za-z][A-Za-zs-]+$/.test(normalizedSource)
+    ? normalizedSource.toLowerCase()
+    : normalizedSource;
+
+  if (!term || blockedKeywordTerms.has(term) || term.length < 2 || term.length > 24) {
+    return "";
+  }
+
+  return term;
+}
+
+function extractKeywordCandidates(article, baseEntities) {
   const bag = new Map();
-  const rawKeywords = article.keywords ?? [];
-  rawKeywords.forEach((keyword) => {
-    bag.set(keyword, (bag.get(keyword) ?? 0) + 3);
+  const fullText = articleTextForMatching(article);
+  const pushTerm = (term, weight = 1) => {
+    const normalized = normalizeKeywordTerm(term);
+    if (!normalized) {
+      return;
+    }
+    bag.set(normalized, (bag.get(normalized) ?? 0) + weight);
+  };
+
+  (article.keywords ?? []).forEach((keyword) => {
+    pushTerm(keyword, 4);
   });
 
-  const fullText = `${article.title} ${article.summary}`;
+  baseEntities.forEach((entity) => {
+    const candidates = [entity.name, ...(entity.aliases ?? [])];
+    if (candidates.some((candidate) => fullText.includes(candidate))) {
+      pushTerm(entity.name, 3);
+    }
+  });
 
   domainPhrases.forEach((phrase) => {
     if (fullText.toLowerCase().includes(phrase.toLowerCase())) {
-      bag.set(phrase, (bag.get(phrase) ?? 0) + 2);
+      pushTerm(phrase, 2);
     }
   });
 
-  const zhParts = fullText.match(/[\u4e00-\u9fa5]{2,8}/g) ?? [];
-  zhParts.forEach((token) => {
-    if (!zhStopwords.has(token) && token.length <= 8) {
-      bag.set(token, (bag.get(token) ?? 0) + 1);
-    }
-  });
+  decodeHtmlEntities(article.title ?? "")
+    .split(/[：:，,、|｜]/)
+    .map((part) => cleanWhitespace(part))
+    .filter((part) => part.length >= 3 && part.length <= 18)
+    .forEach((part) => pushTerm(part, 1));
 
   const enParts = fullText.match(/[A-Za-z][A-Za-z-]{2,}/g) ?? [];
   enParts.forEach((token) => {
     const normalized = token.toLowerCase();
     if (!enStopwords.has(normalized)) {
-      bag.set(token, (bag.get(token) ?? 0) + 1);
+      pushTerm(token, 1);
     }
   });
 
   return [...bag.entries()]
     .sort((left, right) => right[1] - left[1])
     .map(([term]) => term)
-    .slice(0, 8);
+    .slice(0, 10);
 }
 
 function resolveEntities(article, baseEntities) {
-  const text = `${article.title} ${article.summary} ${(article.keywords ?? []).join(" ")}`;
-  const matched = new Set(article.entityIds ?? []);
+  const text = articleTextForMatching(article);
+  const validIds = new Set(baseEntities.map((entity) => entity.id));
+  const matched = new Set((article.entityIds ?? []).filter((entityId) => validIds.has(entityId)));
 
   baseEntities.forEach((entity) => {
     const candidates = [entity.name, ...(entity.aliases ?? [])];
@@ -357,8 +491,21 @@ function resolveEntities(article, baseEntities) {
   return [...matched];
 }
 
+function isBlockedOriginalUrl(value) {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return blockedOriginalHosts.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function isSpecificSourceUrl(originalUrl, sourceUrl) {
-  if (!originalUrl) {
+  if (!originalUrl || isBlockedOriginalUrl(originalUrl)) {
     return false;
   }
 
@@ -474,45 +621,92 @@ function resolveOriginalUrl(article, source) {
 
 function normalizeArticle(article, index, baseEntities, sourceLookup) {
   const source = sourceLookup.get(article.sourceName);
-  const keywords = unique(extractKeywordCandidates(article));
-  const entityIds = unique(resolveEntities(article, baseEntities));
-  const regionTags = unique(article.regionTags ?? (detectGuangxi(article) ? ["广西"] : ["全国"]));
-  const category = classifyArticle(article);
+  const normalizedTitle = cleanTitle(article.title, source?.name ?? article.sourceName ?? "");
+  if (!normalizedTitle) {
+    return null;
+  }
+
+  const normalizedSummary = pickFirstSanitized(article.summary, normalizedTitle);
+  if (!normalizedSummary) {
+    return null;
+  }
+
+  const normalizedArticle = {
+    ...article,
+    title: normalizedTitle,
+    summary: normalizedSummary,
+  };
+
+  const keywords = unique(extractKeywordCandidates(normalizedArticle, baseEntities));
+  const entityIds = unique(resolveEntities(normalizedArticle, baseEntities));
+  const regionTags = unique(normalizedArticle.regionTags ?? (detectGuangxi(normalizedArticle) ? ["\u5E7F\u897F"] : ["\u5168\u56FD"]));
+  const category = classifyArticle(normalizedArticle);
 
   return {
-    id: article.id ?? `article-${index + 1}`,
-    slug: article.slug ?? slugify(article.title ?? `article-${index + 1}`),
-    title: article.title,
-    summary: article.summary,
-    coverImage: article.coverImage ?? coverThemes[index % coverThemes.length],
-    sourceName: article.sourceName,
-    sourceUrl: source?.siteUrl ?? article.sourceUrl,
-    originalUrl: resolveOriginalUrl(article, source),
-    publishedAt: article.publishedAt,
-    language: article.language === "en" ? "en" : "zh",
+    id: normalizedArticle.id ?? `article-${index + 1}`,
+    slug: normalizedArticle.slug ?? slugify(normalizedTitle || `article-${index + 1}`),
+    title: normalizedTitle,
+    summary: normalizedSummary,
+    coverImage: normalizedArticle.coverImage ?? coverThemes[index % coverThemes.length],
+    sourceName: normalizedArticle.sourceName,
+    sourceUrl: source?.siteUrl ?? normalizedArticle.sourceUrl,
+    originalUrl: resolveOriginalUrl(normalizedArticle, source),
+    publishedAt: normalizedArticle.publishedAt,
+    language: normalizedArticle.language === "en" ? "en" : "zh",
     category,
     keywords,
     regionTags,
-    isGuangxiRelated: detectGuangxi(article),
+    isGuangxiRelated: detectGuangxi(normalizedArticle),
     entityIds,
   };
 }
 
+function normalizeTitleKey(value) {
+  return decodeHtmlEntities(cleanWhitespace(value))
+    .toLowerCase()
+    .replace(/[\s:：,，。、“”"'‘’()（）\[\]【】·•—-]+/g, "");
+}
+
+function articleQualityScore(article) {
+  let score = 0;
+
+  if (isSpecificSourceUrl(article.originalUrl, article.sourceUrl) && isDetailLikeUrl(article.originalUrl)) {
+    score += 8;
+  }
+
+  if (!isBlockedOriginalUrl(article.originalUrl)) {
+    score += 3;
+  }
+
+  score += Math.min(article.keywords.length, 5);
+  if ((article.summary ?? "").length >= 80) {
+    score += 1;
+  }
+
+  return score;
+}
+
 function dedupeArticles(articles) {
-  const seen = new Set();
+  const ordered = articles
+    .slice()
+    .sort((left, right) => articleQualityScore(right) - articleQualityScore(left) || right.publishedAt.localeCompare(left.publishedAt));
+  const seenUrls = new Set();
+  const seenTitles = new Set();
   const deduped = [];
 
-  for (const article of articles) {
-    const key = `${article.originalUrl || article.title}::${article.sourceName}`;
-    if (seen.has(key)) {
+  for (const article of ordered) {
+    const urlKey = `${article.originalUrl || article.title}::${article.sourceName}`;
+    const titleKey = `${article.sourceName}::${normalizeTitleKey(article.title)}`;
+    if (seenUrls.has(urlKey) || seenTitles.has(titleKey)) {
       continue;
     }
 
-    seen.add(key);
+    seenUrls.add(urlKey);
+    seenTitles.add(titleKey);
     deduped.push(article);
   }
 
-  return deduped;
+  return deduped.sort((left, right) => right.publishedAt.localeCompare(left.publishedAt));
 }
 
 function buildWordCloud(articles) {
@@ -556,29 +750,34 @@ function buildWordCloud(articles) {
   );
 }
 
-function inferRelation(sourceEntity, targetEntity) {
-  if (sourceEntity.type === "region" || targetEntity.type === "region") {
-    return "located_in";
-  }
+function getEntityTokens(entity) {
+  return unique([entity.name, ...(entity.aliases ?? [])].map((term) => normalizeKeywordTerm(term)));
+}
 
-  if (sourceEntity.type === "policy" || targetEntity.type === "policy") {
-    return "guides";
-  }
+function articleMatchesTerms(article, terms) {
+  const text = articleTextForMatching(article).toLowerCase();
+  return terms.some((term) => term && text.includes(String(term).toLowerCase()));
+}
 
-  if (sourceEntity.type === "technology" || targetEntity.type === "technology") {
-    return "supports";
-  }
+function collectBlueprintEvidence(articles, sourceEntity, targetEntity, extraTerms = []) {
+  const sourceTokens = getEntityTokens(sourceEntity);
+  const targetTokens = getEntityTokens(targetEntity);
 
-  if (sourceEntity.type === "enterprise" || targetEntity.type === "enterprise") {
-    return "drives";
-  }
-
-  return "related";
+  return unique(
+    articles
+      .filter((article) => {
+        const sourceHit = articleMatchesTerms(article, sourceTokens);
+        const targetHit = articleMatchesTerms(article, targetTokens);
+        const keywordHit = articleMatchesTerms(article, extraTerms);
+        return (sourceHit && targetHit) || (sourceHit && keywordHit) || (targetHit && keywordHit);
+      })
+      .map((article) => article.id),
+  ).slice(0, 6);
 }
 
 function buildKnowledgeGraph(articles, baseEntities) {
+  const articleLookup = new Map(articles.map((article) => [article.id, article]));
   const entityMap = new Map(baseEntities.map((entity) => [entity.id, { ...entity, relatedArticleIds: [] }]));
-  const edgeMap = new Map();
 
   articles.forEach((article) => {
     article.entityIds.forEach((entityId) => {
@@ -590,37 +789,60 @@ function buildKnowledgeGraph(articles, baseEntities) {
       current.relatedArticleIds = unique([...current.relatedArticleIds, article.id]);
       entityMap.set(entityId, current);
     });
-
-    const relatedIds = unique(article.entityIds).filter((entityId) => entityMap.has(entityId));
-
-    for (let i = 0; i < relatedIds.length; i += 1) {
-      for (let j = i + 1; j < relatedIds.length; j += 1) {
-        const leftId = relatedIds[i];
-        const rightId = relatedIds[j];
-        const pairKey = [leftId, rightId].sort().join("::");
-        const leftEntity = entityMap.get(leftId);
-        const rightEntity = entityMap.get(rightId);
-        const existing = edgeMap.get(pairKey) ?? {
-          sourceEntityId: leftId,
-          targetEntityId: rightId,
-          relationType: inferRelation(leftEntity, rightEntity),
-          evidenceArticleIds: [],
-          weight: 0,
-        };
-        existing.weight += article.isGuangxiRelated ? 2 : 1;
-        existing.evidenceArticleIds = unique([...existing.evidenceArticleIds, article.id]);
-        edgeMap.set(pairKey, existing);
-      }
-    }
   });
 
-  const entities = [...entityMap.values()]
-    .filter((entity) => entity.relatedArticleIds.length > 0 || entity.region === "广西")
-    .sort((left, right) => right.relatedArticleIds.length - left.relatedArticleIds.length);
+  const edges = industryChainBlueprint
+    .map((blueprint) => {
+      const sourceEntity = entityMap.get(blueprint.sourceEntityId);
+      const targetEntity = entityMap.get(blueprint.targetEntityId);
+      if (!sourceEntity || !targetEntity) {
+        return null;
+      }
 
-  const edges = [...edgeMap.values()]
-    .filter((edge) => edge.evidenceArticleIds.length > 0)
+      const evidenceArticleIds = collectBlueprintEvidence(
+        articles,
+        sourceEntity,
+        targetEntity,
+        blueprint.keywords ?? [],
+      );
+
+      if (evidenceArticleIds.length === 0) {
+        return null;
+      }
+
+      return {
+        sourceEntityId: blueprint.sourceEntityId,
+        targetEntityId: blueprint.targetEntityId,
+        relationType: blueprint.relationType,
+        evidenceArticleIds,
+        weight: evidenceArticleIds.reduce(
+          (total, articleId) => total + (articleLookup.get(articleId)?.isGuangxiRelated ? 2 : 1),
+          0,
+        ),
+      };
+    })
+    .filter(Boolean)
     .sort((left, right) => right.weight - left.weight);
+
+  edges.forEach((edge) => {
+    edge.evidenceArticleIds.forEach((articleId) => {
+      const sourceEntity = entityMap.get(edge.sourceEntityId);
+      const targetEntity = entityMap.get(edge.targetEntityId);
+      if (sourceEntity) {
+        sourceEntity.relatedArticleIds = unique([...sourceEntity.relatedArticleIds, articleId]);
+        entityMap.set(sourceEntity.id, sourceEntity);
+      }
+      if (targetEntity) {
+        targetEntity.relatedArticleIds = unique([...targetEntity.relatedArticleIds, articleId]);
+        entityMap.set(targetEntity.id, targetEntity);
+      }
+    });
+  });
+
+  const edgeEntityIds = new Set(edges.flatMap((edge) => [edge.sourceEntityId, edge.targetEntityId]));
+  const entities = [...entityMap.values()]
+    .filter((entity) => edgeEntityIds.has(entity.id) || entity.relatedArticleIds.length > 0 || entity.id === "guangxi")
+    .sort((left, right) => right.relatedArticleIds.length - left.relatedArticleIds.length || left.name.localeCompare(right.name, "zh-CN"));
 
   return { entities, edges };
 }
@@ -854,13 +1076,12 @@ async function parseHtmlArticle(source, link) {
     source.name,
   );
 
-  const summary = cleanWhitespace(
-    pickFirst(
-      getMetaContent(html, ["description", "Description", "og:description", "twitter:description"]),
-      buildSummaryFromParagraphs(paragraphs),
-      link.text,
-    ),
-  ).slice(0, 260);
+  const summary = pickFirstSanitized(
+    getMetaContent(html, ["description", "Description", "og:description", "twitter:description"]),
+    buildSummaryFromParagraphs(paragraphs),
+    link.text,
+    title,
+  );
 
   if (!title || title.length < 6 || !summary || !isRelevantArticle(source, title, summary)) {
     return null;
@@ -873,7 +1094,7 @@ async function parseHtmlArticle(source, link) {
     html.match(/(\d{2}\/\d{2}\/20\d{2})/)?.[1],
   );
   const publishedAt = parsePublishedAt(rawPublishedAt, source.language);
-  if (!publishedAt) {
+  if (!publishedAt || isBlockedOriginalUrl(response.url)) {
     return null;
   }
 
@@ -943,11 +1164,7 @@ async function crawlHtmlSource(source) {
 }
 
 function pickExcerptFromWp(post) {
-  return cleanWhitespace(
-    decodeHtmlEntities(
-      stripTags(post.excerpt?.rendered || post.content?.rendered || ""),
-    ),
-  ).slice(0, 260);
+  return pickFirstSanitized(post.excerpt?.rendered || "", post.content?.rendered || "");
 }
 
 async function crawlWpJsonSource(source) {
@@ -974,7 +1191,7 @@ async function crawlWpJsonSource(source) {
   const articles = response.data
     .map((post) => {
       const title = cleanTitle(post.title?.rendered, source.name);
-      const summary = pickExcerptFromWp(post);
+      const summary = pickFirstSanitized(pickExcerptFromWp(post), title);
       if (!title || title.length < 6 || !summary || !isRelevantArticle(source, title, summary)) {
         return null;
       }
@@ -1116,6 +1333,7 @@ async function main() {
 
   const normalizedArticles = [...liveArticles, ...fallbackSeedArticles]
     .map((article, index) => normalizeArticle(article, index, baseEntities, sourceLookup))
+    .filter(Boolean)
     .sort((left, right) => right.publishedAt.localeCompare(left.publishedAt));
 
   const dedupedArticles = dedupeArticles(normalizedArticles);
@@ -1143,6 +1361,7 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
 
 
 

@@ -26,6 +26,26 @@ const listLikeUrlPatterns = [
   /\/xwzx\/?$/i,
 ];
 
+const blockedOriginalHosts = new Set(["gzw.gxzf.gov.cn", "gxt.gxzf.gov.cn"]);
+const blockedWordCloudTerms = new Set([
+  "热点新闻",
+  "近日",
+  "详细内容",
+  "点击查看",
+  "更多内容",
+  "月份例行新闻发布",
+  "例行新闻发布会",
+  "能力提升",
+  "服务能力",
+  "平台能力",
+  "创新研究院",
+  "信息创新研究院",
+  "中国科学院",
+  "data",
+]);
+
+const templateArtifactPattern = /(?:title|content|time)_(?:value|vaule)|['"`]\s*\+\s*[a-z_]{2,}\s*\+\s*['"`]?/i;
+
 function isDetailLikeUrl(value) {
   if (!isHttpUrl(value)) {
     return false;
@@ -44,8 +64,21 @@ function isDetailLikeUrl(value) {
   }
 }
 
-function isSpecificUrl(value, sourceUrl) {
+function isBlockedOriginalUrl(value) {
   if (!isHttpUrl(value)) {
+    return false;
+  }
+
+  try {
+    const current = new URL(String(value));
+    return blockedOriginalHosts.has(current.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isSpecificUrl(value, sourceUrl) {
+  if (!isHttpUrl(value) || isBlockedOriginalUrl(value)) {
     return false;
   }
 
@@ -118,12 +151,20 @@ for (const article of articles) {
     errors.push(`Article missing title or summary: ${article.id}`);
   }
 
+  if (templateArtifactPattern.test(`${article.title} ${article.summary}`)) {
+    errors.push(`Article contains template artifact text: ${article.id}`);
+  }
+
   if (!sourceNameSet.has(article.sourceName)) {
     errors.push(`Article source is not registered: ${article.id} -> ${article.sourceName}`);
   }
 
   if (!isHttpUrl(article.originalUrl) || !isHttpUrl(article.sourceUrl)) {
     errors.push(`Article URLs are invalid: ${article.id}`);
+  }
+
+  if (isBlockedOriginalUrl(article.originalUrl)) {
+    errors.push(`Article originalUrl points to a blocked or unsafe host: ${article.id} -> ${article.originalUrl}`);
   }
 
   if (!isSpecificUrl(article.originalUrl, article.sourceUrl)) {
@@ -189,6 +230,10 @@ for (const category of ["all", "enterprise", "technology", "policy"]) {
   for (const item of items) {
     if (!item.term || item.articleCount < 1 || item.weight < 1) {
       errors.push(`Invalid word cloud item in ${category}: ${JSON.stringify(item)}`);
+    }
+
+    if (blockedWordCloudTerms.has(item.term) || /^[息力化性度台链层项版观察]/.test(item.term)) {
+      errors.push(`Word cloud term looks incomplete or blocked in ${category}: ${item.term}`);
     }
   }
 }

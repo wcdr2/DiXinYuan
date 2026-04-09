@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 import { formatDate } from "@/lib/data";
-import { categoryLabels, getArticleHref, getCoverSurface, getDictionary } from "@/lib/site";
+import { categoryLabels, getArticleHref, getCoverSurface, getDictionary, getSourceAccessUrls } from "@/lib/site";
 import type { Article, Locale } from "@/lib/types";
 
 interface ArticleCardProps {
@@ -13,6 +13,8 @@ export function ArticleCard({ article, locale, variant = "default" }: ArticleCar
   const dict = getDictionary(locale);
   const href = getArticleHref(locale, article);
   const cover = getCoverSurface(article.coverImage);
+  const sourceAccess = getSourceAccessUrls(article.originalUrl, article.sourceUrl);
+  const backupLabel = locale === "zh" ? "备用网址" : "Backup";
 
   return (
     <article className={`article-card article-card--${variant}`}>
@@ -35,9 +37,14 @@ export function ArticleCard({ article, locale, variant = "default" }: ArticleCar
             <Link href={href} className="text-link">
               {dict.cards.readMore}
             </Link>
-            <Link href={article.originalUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer">
+            <a href={sourceAccess.primaryUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer noopener">
               {dict.cards.sourceLink}
-            </Link>
+            </a>
+            {sourceAccess.backupUrl ? (
+              <a href={sourceAccess.backupUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer noopener">
+                {backupLabel}
+              </a>
+            ) : null}
           </div>
         </div>
         <div className="keyword-row">

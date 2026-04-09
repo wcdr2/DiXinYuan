@@ -84,9 +84,9 @@ export default async function SourcesPage({ params }: SourcesPageProps) {
                 <div className="source-card__meta">
                   <div>
                     <span className="detail-label">{labels.target}</span>
-                    <Link href={targetUrl} target="_blank" className="text-link source-card__link">
+                    <a href={targetUrl} target="_blank" rel="noreferrer noopener" className="text-link source-card__link">
                       {targetUrl}
-                    </Link>
+                    </a>
                   </div>
                   <div>
                     <span className="detail-label">{labels.keywords}</span>

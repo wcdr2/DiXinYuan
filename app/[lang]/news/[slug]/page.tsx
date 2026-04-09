@@ -2,7 +2,7 @@
 import { notFound } from "next/navigation";
 import { ArticleCard } from "@/components/article-card";
 import { formatDate, getArticleBySlug, getArticles, getRelatedArticles, isLocale } from "@/lib/data";
-import { categoryLabels, getCoverSurface, getDictionary, withLocale } from "@/lib/site";
+import { categoryLabels, getCoverSurface, getDictionary, getSourceAccessUrls, withLocale } from "@/lib/site";
 
 interface NewsDetailProps {
   params: Promise<{ lang: string; slug: string }>;
@@ -42,6 +42,7 @@ export default async function NewsDetailPage({ params }: NewsDetailProps) {
   const dict = getDictionary(lang);
   const related = getRelatedArticles(article);
   const cover = getCoverSurface(article.coverImage);
+  const sourceAccess = getSourceAccessUrls(article.originalUrl, article.sourceUrl);
   const detailLabels =
     lang === "zh"
       ? {
@@ -89,15 +90,15 @@ export default async function NewsDetailPage({ params }: NewsDetailProps) {
           <div className="detail-link-ribbon">
             <div className="detail-link-ribbon__item">
               <span className="detail-label">{detailLabels.original}</span>
-              <Link href={article.originalUrl} className="detail-source-link" target="_blank" rel="noreferrer">
-                {getReadableUrl(article.originalUrl)}
-              </Link>
+              <a href={sourceAccess.primaryUrl} className="detail-source-link" target="_blank" rel="noreferrer noopener">
+                {getReadableUrl(sourceAccess.primaryUrl)}
+              </a>
             </div>
             <div className="detail-link-ribbon__item">
               <span className="detail-label">{detailLabels.site}</span>
-              <Link href={article.sourceUrl} className="detail-source-site" target="_blank" rel="noreferrer">
+              <a href={article.sourceUrl} className="detail-source-site" target="_blank" rel="noreferrer noopener">
                 {getReadableUrl(article.sourceUrl)}
-              </Link>
+              </a>
             </div>
           </div>
           <div className="detail-meta-grid">
@@ -119,9 +120,9 @@ export default async function NewsDetailPage({ params }: NewsDetailProps) {
             </div>
           </div>
           <div className="hero-actions hero-actions--detail">
-            <Link href={article.originalUrl} className="button-primary" target="_blank" rel="noreferrer">
+            <a href={sourceAccess.primaryUrl} className="button-primary" target="_blank" rel="noreferrer noopener">
               {dict.cards.sourceLink}
-            </Link>
+            </a>
             <Link href={withLocale(lang, "/news")} className="button-secondary">
               {dict.cards.allNews}
             </Link>
@@ -145,12 +146,17 @@ export default async function NewsDetailPage({ params }: NewsDetailProps) {
           <section className="card-panel card-panel--soft detail-source-card">
             <p className="section-kicker">{detailLabels.original}</p>
             <strong>{article.sourceName}</strong>
-            <Link href={article.originalUrl} className="detail-source-link" target="_blank" rel="noreferrer">
-              {getReadableUrl(article.originalUrl)}
-            </Link>
-            <Link href={article.sourceUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer">
+            <a href={sourceAccess.primaryUrl} className="detail-source-link" target="_blank" rel="noreferrer noopener">
+              {getReadableUrl(sourceAccess.primaryUrl)}
+            </a>
+            <a href={article.sourceUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer noopener">
               {detailLabels.site}
-            </Link>
+            </a>
+            {sourceAccess.backupUrl ? (
+              <a href={sourceAccess.backupUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer noopener">
+                {lang === "zh" ? "备用网址" : "Backup"}
+              </a>
+            ) : null}
           </section>
           <section className="card-panel card-panel--soft">
             <p className="section-kicker">{dict.sections.keywordInsight}</p>

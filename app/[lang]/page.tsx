@@ -8,7 +8,6 @@ import {
   getGraphDataset,
   getLatestByCategory,
   getSources,
-  getSummaryMetrics,
   getWordCloudItems,
   isLocale,
 } from "@/lib/data";
@@ -49,7 +48,6 @@ export default async function HomePage({ params }: HomePageProps) {
   }
 
   const dict = getDictionary(lang);
-  const metrics = getSummaryMetrics();
   const articles = getArticles();
   const featured = getFeaturedArticles();
   const graph = getGraphDataset();
@@ -75,38 +73,15 @@ export default async function HomePage({ params }: HomePageProps) {
             <div className="home-hero__rule" aria-hidden="true" />
             <p className="section-kicker">{dict.hero.eyebrow}</p>
             <h1 className="home-hero__title">
-              <span>{dict.hero.titleTop}</span>
-              <strong>{dict.hero.titleHighlight}</strong>
-              <span>{dict.hero.titleBottom}</span>
+              <span className="home-hero__title-line">
+                <span>{dict.hero.titleTop}</span>
+                <strong>{dict.hero.titleHighlight}</strong>
+              </span>
+              <span className="home-hero__title-line home-hero__title-line--bottom">
+                <span>{dict.hero.titleBottom}</span>
+              </span>
             </h1>
-            <p className="home-hero__summary">{dict.hero.summary}</p>
-            <div className="hero-actions hero-actions--hero">
-              <Link href={withLocale(lang, "/news")} className="button-primary">
-                {dict.hero.primaryCta}
-              </Link>
-              <Link href={withLocale(lang, "/knowledge-graph")} className="button-secondary">
-                {dict.hero.secondaryCta}
-              </Link>
-            </div>
             <div className="home-hero__rule home-hero__rule--lower" aria-hidden="true" />
-          </div>
-        </div>
-        <div className="shell home-hero__metrics home-hero__metrics--broadcast">
-          <div className="metric-box">
-            <span>{dict.hero.statArticles}</span>
-            <strong>{metrics.totalArticles}</strong>
-          </div>
-          <div className="metric-box">
-            <span>{dict.hero.statSources}</span>
-            <strong>{metrics.totalSources}</strong>
-          </div>
-          <div className="metric-box">
-            <span>{dict.hero.statGraph}</span>
-            <strong>{metrics.totalEntities}</strong>
-          </div>
-          <div className="metric-box">
-            <span>{dict.hero.statUpdate}</span>
-            <strong>{formatDate(lang, metrics.latestUpdateAt)}</strong>
           </div>
         </div>
       </section>
@@ -200,10 +175,20 @@ export default async function HomePage({ params }: HomePageProps) {
             {latestByCategory.map((group) => {
               const leadItem = group.items[0];
               const tailItems = group.items.slice(1, 4);
+              const columnCover = getCoverSurface(leadItem?.coverImage);
 
               return (
                 <article key={group.category} className="editorial-column">
-                  <div className={`editorial-column__visual editorial-column__visual--${group.category}`} aria-hidden="true" />
+                  <div
+                    className={`editorial-column__visual editorial-column__visual--photo ${columnCover.className}`}
+                    style={columnCover.style}
+                    aria-hidden="true"
+                  >
+                    <div className="editorial-column__visual-mask" />
+                    <span className={`category-pill category-pill--${group.category}`}>
+                      {categoryLabels[lang][group.category]}
+                    </span>
+                  </div>
                   <div className="editorial-column__inner">
                     <div className="editorial-column__header">
                       <h3>{categoryLabels[lang][group.category]}</h3>

@@ -8,6 +8,7 @@ import {
   getArticleHref,
   getCoverSurface,
   getDictionary,
+  getSourceAccessUrls,
   withLocale,
 } from "@/lib/site";
 
@@ -40,6 +41,7 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
   const sources = getSources();
   const leadArticle = articles[0];
   const leadCover = getCoverSurface(leadArticle?.coverImage);
+  const leadSourceAccess = leadArticle ? getSourceAccessUrls(leadArticle.originalUrl, leadArticle.sourceUrl) : null;
   const railArticles = articles.slice(1, 5);
   const listArticles = articles.slice(1);
   const hasArticles = articles.length > 0;
@@ -139,9 +141,16 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
                       <Link href={getArticleHref(lang, leadArticle)} className="text-link">
                         {dict.cards.readMore}
                       </Link>
-                      <Link href={leadArticle.originalUrl} className="text-link text-link--muted" target="_blank">
-                        {dict.cards.sourceLink}
-                      </Link>
+                      {leadSourceAccess?.primaryUrl ? (
+                        <a href={leadSourceAccess.primaryUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer noopener">
+                          {dict.cards.sourceLink}
+                        </a>
+                      ) : null}
+                      {leadSourceAccess?.backupUrl ? (
+                        <a href={leadSourceAccess.backupUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer noopener">
+                          {lang === "zh" ? "备用网址" : "Backup"}
+                        </a>
+                      ) : null}
                     </div>
                   </div>
                 </div>

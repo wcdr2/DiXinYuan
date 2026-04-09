@@ -89,7 +89,7 @@ export const dictionaries = {
       summary:
         "围绕企业、技术与政策三条主线，网站通过权威来源白名单、结构化数据加工和双语界面呈现，形成更接近研究机构门户的信息服务体验。",
       primaryCta: "浏览最新新闻",
-      secondaryCta: "查看广西知识图谱",
+      secondaryCta: "查看产业链知识图谱",
       statArticles: "已整理新闻",
       statSources: "白名单来源",
       statGraph: "图谱节点",
@@ -118,8 +118,9 @@ export const dictionaries = {
       newsSummary: "浏览来自白名单来源的新闻摘要，可按栏目、来源、时间和广西相关性筛选。",
       cloudTitle: "产业词云",
       cloudSummary: "基于最近 30 天已发布新闻提取关键词，支持按栏目查看并跳转至对应结果。",
-      graphTitle: "广西专题知识图谱",
-      graphSummary: "围绕广西区域政策、机构、园区、技术与项目关系构建图谱，可查看实体简介与证据新闻。",
+      graphTitle: "地球信息产业链知识图谱",
+      graphSummary:
+        "围绕上游感知、中游平台智能与下游场景应用构建地球信息产业链图谱，可查看实体简介、链路关系与证据新闻。",
       sourcesTitle: "数据来源与自动更新说明",
       sourcesSummary: "仅允许进入白名单的权威来源参与自动发布链路，并保留抓取日志、原文链接和来源说明。",
       aboutTitle: "项目介绍",
@@ -155,7 +156,7 @@ export const dictionaries = {
       empty: "当前暂无可展示的热词。",
     },
     graph: {
-      selectPrompt: "点击图谱节点查看实体简介、关联关系和证据文章。",
+      selectPrompt: "点击产业链节点查看实体简介、关联关系和证据文章。",
       empty: "当前筛选条件下暂无节点。",
       evidence: "证据新闻",
       relations: "关联关系",
@@ -210,7 +211,7 @@ export const dictionaries = {
       summary:
         "The portal organizes enterprise, technology and policy signals from curated sources, then presents them through a bilingual research-portal experience.",
       primaryCta: "Browse latest news",
-      secondaryCta: "Open Guangxi graph",
+      secondaryCta: "Open the industry-chain graph",
       statArticles: "Curated articles",
       statSources: "Trusted sources",
       statGraph: "Graph entities",
@@ -239,8 +240,9 @@ export const dictionaries = {
       newsSummary: "Browse structured article summaries from trusted sources with filtering by category, source, time and Guangxi relevance.",
       cloudTitle: "Industry Word Cloud",
       cloudSummary: "Keywords are generated from the latest 30-day article set and can route into filtered news results.",
-      graphTitle: "Guangxi Knowledge Graph",
-      graphSummary: "The graph emphasizes Guangxi-focused policies, institutions, parks, technologies and projects with linked evidence articles.",
+      graphTitle: "Geospatial Industry-Chain Graph",
+      graphSummary:
+        "The graph reconstructs the geospatial industry chain across sensing, platforms, intelligence and Guangxi application scenarios, with linked evidence articles.",
       sourcesTitle: "Source Policy and Update Notes",
       sourcesSummary: "Only trusted sources can enter the auto-publication chain, and each item keeps its source link and update log record.",
       aboutTitle: "About the Project",
@@ -276,7 +278,7 @@ export const dictionaries = {
       empty: "No terms are available right now.",
     },
     graph: {
-      selectPrompt: "Select a node to inspect the entity profile, linked relations and evidence articles.",
+      selectPrompt: "Select an industry-chain node to inspect the entity profile, linked relations and evidence articles.",
       empty: "No nodes under the current filter.",
       evidence: "Evidence articles",
       relations: "Relations",
@@ -355,5 +357,89 @@ export function getCoverSurface(coverImage: string | undefined): {
   const safeTone = /^[a-z0-9-]+$/i.test(normalized) ? normalized : "marine-signal";
   return {
     className: `cover-surface tone-${safeTone}`,
+  };
+}
+
+const preferredMirrorHosts = new Set(["www.ogc.org", "ogc.org", "www.esa.int", "esa.int"]);
+const forceMirrorHosts = new Set([
+  "www.gxzf.gov.cn",
+  "dnr.gxzf.gov.cn",
+  "gzw.gxzf.gov.cn",
+  "gxt.gxzf.gov.cn",
+]);
+
+function isHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function buildTextMirrorUrl(url: string) {
+  if (!isHttpUrl(url)) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(url);
+    const normalizedPath = `${parsed.pathname}${parsed.search}`;
+    return `https://r.jina.ai/${parsed.protocol}//${parsed.host}${normalizedPath}`;
+  } catch {
+    return "";
+  }
+}
+
+function uniqueUrls(values: Array<string | undefined>) {
+  return [...new Set(values.map((value) => String(value ?? "").trim()).filter((value) => isHttpUrl(value)))];
+}
+
+export function getSourceAccessUrls(originalUrl: string, sourceUrl: string) {
+  const urls = uniqueUrls([originalUrl, sourceUrl]);
+  let primaryUrl = urls[0] ?? "";
+  let backupUrl = urls[1] ?? "";
+  let usedMirror = false;
+
+  if (!primaryUrl) {
+    return {
+      primaryUrl: "",
+      backupUrl: "",
+      usedMirror: false,
+    };
+  }
+
+  try {
+    const host = new URL(primaryUrl).hostname.toLowerCase();
+    const mirrorUrl = buildTextMirrorUrl(primaryUrl);
+
+    if ((forceMirrorHosts.has(host) || preferredMirrorHosts.has(host)) && mirrorUrl) {
+      usedMirror = true;
+      const originalPrimary = primaryUrl;
+      primaryUrl = mirrorUrl;
+      backupUrl = originalPrimary;
+      return {
+        primaryUrl,
+        backupUrl,
+        usedMirror,
+      };
+    }
+
+    if (!backupUrl && mirrorUrl && mirrorUrl !== primaryUrl) {
+      backupUrl = mirrorUrl;
+      usedMirror = true;
+    }
+  } catch {
+    return {
+      primaryUrl,
+      backupUrl,
+      usedMirror,
+    };
+  }
+
+  return {
+    primaryUrl,
+    backupUrl,
+    usedMirror,
   };
 }
