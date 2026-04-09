@@ -1,0 +1,50 @@
+﻿<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g opacity="0.2" stroke="#D6EEFF" stroke-width="1">
+    <path d="M0 150H1600"/>
+    <path d="M0 330H1600"/>
+    <path d="M0 510H1600"/>
+    <path d="M0 690H1600"/>
+    <path d="M320 0V900"/>
+    <path d="M640 0V900"/>
+    <path d="M960 0V900"/>
+    <path d="M1280 0V900"/>
+  </g>
+  <g opacity="0.28" fill="#A6EFFF">
+    <circle cx="120" cy="110" r="2"/>
+    <circle cx="265" cy="154" r="2"/>
+    <circle cx="410" cy="215" r="2"/>
+    <circle cx="1220" cy="126" r="2"/>
+    <circle cx="1360" cy="198" r="2"/>
+    <circle cx="1460" cy="250" r="2"/>
+    <circle cx="980" cy="620" r="2"/>
+    <circle cx="1080" cy="710" r="2"/>
+    <circle cx="1210" cy="760" r="2"/>
+  </g>
+  <g opacity="0.52" stroke="#7CEFFF" stroke-width="3" filter="url(#glow)">
+    <path d="M520 455C653 422 711 438 812 422C903 407 985 370 1087 380C1180 389 1251 337 1350 340C1434 342 1493 320 1600 343"/>
+    <path d="M264 536C355 490 470 508 560 497C661 485 763 515 848 501C935 486 1022 462 1112 472C1210 482 1300 444 1395 452C1483 459 1530 435 1600 451"/>
+    <path d="M101 632C223 579 347 612 474 594C596 577 708 602 829 582C943 563 1043 541 1150 552C1272 564 1372 523 1516 529"/>
+    <path d="M870 740C930 720 995 722 1048 692C1114 655 1150 636 1209 646C1272 656 1337 617 1392 626C1450 636 1506 615 1565 631"/>
+  </g>
+  <g opacity="0.52" filter="url(#glow)">
+    <path d="M990 664L1034 653L1088 671L1138 646L1172 662L1230 646L1280 680L1334 664L1380 689" stroke="#9BFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M1160 742L1182 726L1210 736L1252 718L1274 733L1301 724" stroke="#9BFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M1358 706L1384 696L1412 714L1437 695" stroke="#9BFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M1486 770L1511 760L1532 774" stroke="#9BFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <defs>
+    <linearGradient id="bg" x1="800" y1="0" x2="800" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4B71A7"/>
+      <stop offset="0.56" stop-color="#73A5C8"/>
+      <stop offset="1" stop-color="#A9E3E7"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="1600" height="900" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

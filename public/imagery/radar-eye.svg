@@ -1,0 +1,44 @@
+﻿<svg width="720" height="720" viewBox="0 0 720 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="720" rx="360" fill="url(#bg)"/>
+  <circle cx="360" cy="360" r="255" stroke="#B7EDFF" stroke-opacity="0.18" stroke-width="2"/>
+  <circle cx="360" cy="360" r="194" stroke="#B7EDFF" stroke-opacity="0.28" stroke-width="2"/>
+  <circle cx="360" cy="360" r="126" stroke="#B7EDFF" stroke-opacity="0.35" stroke-width="2"/>
+  <circle cx="360" cy="360" r="60" stroke="#E3FCFF" stroke-opacity="0.7" stroke-width="3"/>
+  <g opacity="0.18" stroke="#CFF4FF" stroke-width="1">
+    <path d="M82 160H638"/>
+    <path d="M82 278H638"/>
+    <path d="M82 442H638"/>
+    <path d="M82 560H638"/>
+    <path d="M160 82V638"/>
+    <path d="M278 82V638"/>
+    <path d="M442 82V638"/>
+    <path d="M560 82V638"/>
+  </g>
+  <g stroke="#8DEEFF" stroke-width="3" stroke-linecap="round" filter="url(#glow)">
+    <path d="M360 360L558 248"/>
+    <path d="M360 360L528 476"/>
+    <path d="M360 360L244 532"/>
+    <path d="M360 360L210 224"/>
+  </g>
+  <g fill="#A6F5FF" filter="url(#glow)">
+    <circle cx="558" cy="248" r="9"/>
+    <circle cx="528" cy="476" r="8"/>
+    <circle cx="244" cy="532" r="8"/>
+    <circle cx="210" cy="224" r="10"/>
+    <circle cx="360" cy="360" r="14"/>
+  </g>
+  <path d="M183 387C248 298 355 255 455 271C542 286 603 349 617 427" stroke="#78E7F8" stroke-opacity="0.6" stroke-width="5" stroke-linecap="round"/>
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 360) rotate(90) scale(360)">
+      <stop stop-color="#6AA5C8" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#0F2747" stop-opacity="0.02"/>
+    </radialGradient>
+    <filter id="glow" x="0" y="0" width="720" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

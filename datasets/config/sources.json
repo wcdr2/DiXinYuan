@@ -1,0 +1,286 @@
+[
+  {
+    "id": "gx-dnr",
+    "name": "广西壮族自治区自然资源厅",
+    "type": "government",
+    "siteUrl": "https://dnr.gxzf.gov.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://dnr.gxzf.gov.cn/xwzx/",
+      "fallbackEntryUrls": [
+        "https://dnr.gxzf.gov.cn/xwzx/zrzx/t27412413.shtml",
+        "https://dnr.gxzf.gov.cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "自然资源",
+        "地理信息",
+        "测绘",
+        "遥感",
+        "实景三维",
+        "低空",
+        "地质灾害",
+        "用地"
+      ],
+      "itemLimit": 8,
+      "notes": "重点监测广西自然资源、测绘地理信息、实景三维与低空经济相关栏目。"
+    }
+  },
+  {
+    "id": "gx-gov",
+    "name": "广西壮族自治区人民政府",
+    "type": "government",
+    "siteUrl": "https://www.gxzf.gov.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://www.gxzf.gov.cn/zfwj/zxwj/",
+      "fallbackEntryUrls": [
+        "https://www.gxzf.gov.cn/zfwj/zxwj/t16343169.shtml",
+        "https://www.gxzf.gov.cn/zfwj/zxwj/t19071166.shtml",
+        "https://www.gxzf.gov.cn/zfwj/zxwj/t27094468.shtml",
+        "https://www.gxzf.gov.cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "地理信息",
+        "测绘",
+        "遥感",
+        "自然资源",
+        "北斗",
+        "时空",
+        "低空",
+        "实景三维"
+      ],
+      "itemLimit": 8,
+      "notes": "用于补充自治区级政策、产业专项与重大项目动态。"
+    }
+  },
+  {
+    "id": "mnr",
+    "name": "中华人民共和国自然资源部",
+    "type": "government",
+    "siteUrl": "https://www.mnr.gov.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://www.mnr.gov.cn/dt/",
+      "fallbackEntryUrls": [
+        "https://www.mnr.gov.cn/dt/ywbb/202604/t20260408_2918008.html",
+        "https://www.mnr.gov.cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "调查监测",
+        "测绘",
+        "遥感",
+        "地理信息",
+        "自然资源",
+        "实景三维",
+        "时空"
+      ],
+      "itemLimit": 8,
+      "notes": "用于国家层面政策与业务部署。"
+    }
+  },
+  {
+    "id": "cagis",
+    "name": "中国地理信息产业协会",
+    "type": "association",
+    "siteUrl": "https://www.cagis.org.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://www.cagis.org.cn/Lists/index/cid/8.html",
+      "fallbackEntryUrls": [
+        "https://www.cagis.org.cn/Lists/content/id/4661.html",
+        "https://www.cagis.org.cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "产业",
+        "企业",
+        "地理信息",
+        "数字化转型",
+        "北斗",
+        "遥感",
+        "测绘"
+      ],
+      "itemLimit": 8,
+      "notes": "用于行业协会动态与企业观察。"
+    }
+  },
+  {
+    "id": "csgpc",
+    "name": "中国测绘学会",
+    "type": "association",
+    "siteUrl": "https://www.csgpc.org",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://www.csgpc.org/list/1362.html",
+      "fallbackEntryUrls": [
+        "https://www.csgpc.org/detail/24106.html",
+        "https://www.csgpc.org/live/index/show/id/203.html",
+        "https://www.csgpc.org/activity/index/show/id/61.html"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "智能测绘",
+        "时空信息",
+        "测绘科技",
+        "遥感"
+      ],
+      "itemLimit": 6,
+      "notes": "优先使用测绘科技论坛与学会在线课程页面作为具体来源入口。"
+    }
+  },
+  {
+    "id": "aircas",
+    "name": "中国科学院空天信息创新研究院",
+    "type": "research",
+    "siteUrl": "https://aircas.cas.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://aircas.cas.cn/dtxw/rdxw/",
+      "fallbackEntryUrls": [
+        "https://aircas.cas.cn/dtxw/rdxw/202603/t20260302_8146772.html",
+        "https://aircas.cas.cn/dtxw/",
+        "https://www.aircas.ac.cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "遥感",
+        "卫星",
+        "空天信息",
+        "灾害监测",
+        "地球观测",
+        "时空"
+      ],
+      "itemLimit": 8,
+      "notes": "用于科研与关键技术成果动态。"
+    }
+  },
+  {
+    "id": "supermap",
+    "name": "超图软件",
+    "type": "enterprise",
+    "language": "zh",
+    "trustLevel": "medium",
+    "isActive": true,
+    "siteUrl": "https://www.supermap.com",
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://www.supermap.com/zh-cn/a/news/list_76_1.html",
+      "fallbackEntryUrls": [
+        "https://www.supermap.com/zh-cn/a/news/2_3711.html",
+        "https://www.supermap.com/zh-cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "GeoAI",
+        "三维",
+        "数字孪生",
+        "地理信息平台",
+        "空间智能",
+        "GIS"
+      ],
+      "itemLimit": 6,
+      "notes": "企业官网优先进入新闻列表页，抓取不到时再回退。"
+    }
+  },
+  {
+    "id": "whu",
+    "name": "武汉大学测绘学院",
+    "type": "university",
+    "siteUrl": "https://www.sgg.whu.edu.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://www.sgg.whu.edu.cn/xwzny/xyxw.htm",
+      "fallbackEntryUrls": [
+        "https://www.sgg.whu.edu.cn/info/1365/45081.htm",
+        "https://www.sgg.whu.edu.cn/info/1365/3434.htm",
+        "https://www.sgg.whu.edu.cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "测绘",
+        "遥感",
+        "地理信息",
+        "实验室"
+      ],
+      "itemLimit": 6,
+      "notes": "高校来源优先指向学院新闻栏目页，再回退到具体正文页。"
+    }
+  },
+  {
+    "id": "ogc",
+    "name": "Open Geospatial Consortium",
+    "type": "international",
+    "siteUrl": "https://www.ogc.org",
+    "language": "en",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "api",
+      "entryUrl": "https://www.ogc.org/news/",
+      "parser": "wp-json",
+      "apiUrl": "https://www.ogc.org/wp-json/wp/v2/posts?per_page=8",
+      "whitelist": [
+        "geospatial",
+        "digital twin",
+        "standards",
+        "interoperability"
+      ],
+      "itemLimit": 8,
+      "notes": "优先使用 OGC 的 WordPress JSON 接口。",
+      "fallbackEntryUrls": [
+        "https://www.ogc.org/blog-article/common-challenges-in-geospatial-integration/",
+        "https://www.ogc.org/news/"
+      ]
+    }
+  },
+  {
+    "id": "esa",
+    "name": "European Space Agency",
+    "type": "international",
+    "siteUrl": "https://www.esa.int",
+    "language": "en",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "seed-or-rss",
+      "entryUrl": "https://www.esa.int/Applications/Observing_the_Earth",
+      "parser": "html-list",
+      "whitelist": [
+        "Earth observation",
+        "climate",
+        "remote sensing",
+        "satellite"
+      ],
+      "itemLimit": 8,
+      "notes": "从 ESA 地球观测栏目列表页抓取故事与新闻条目。",
+      "fallbackEntryUrls": [
+        "https://www.esa.int/Applications/Observing_the_Earth/ESA_s_Digital_Twin_Earth_programme_building_a_virtual_model_for_a_changing_planet",
+        "https://www.esa.int/Applications/Observing_the_Earth"
+      ]
+    }
+  }
+]

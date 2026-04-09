@@ -1,0 +1,343 @@
+[
+  {
+    "id": "gx-3d-low-altitude",
+    "slug": "gx-3d-low-altitude",
+    "title": "广西推进实景三维成果服务低空经济应用",
+    "summary": "围绕低空经济、自然资源治理和时空底座建设，广西正在推动实景三维成果在政务协同、产业监测和空间服务中的场景化应用。",
+    "coverImage": "teal-grid",
+    "sourceName": "广西壮族自治区自然资源厅",
+    "sourceUrl": "https://dnr.gxzf.gov.cn",
+    "originalUrl": "https://dnr.gxzf.gov.cn/xwzx/zrzx/t27412413.shtml",
+    "publishedAt": "2026-04-07T09:30:00+08:00",
+    "language": "zh",
+    "category": "policy",
+    "keywords": [
+      "广西",
+      "实景三维",
+      "低空经济",
+      "时空底座",
+      "自然资源"
+    ],
+    "regionTags": [
+      "广西",
+      "南宁"
+    ],
+    "isGuangxiRelated": true,
+    "entityIds": [
+      "guangxi",
+      "nanning",
+      "gx-dnr-org",
+      "real-scene-3d",
+      "low-altitude-economy"
+    ]
+  },
+  {
+    "id": "cagis-digital-transform",
+    "slug": "cagis-digital-transform",
+    "title": "行业观察：地理信息企业数字化转型持续加快",
+    "summary": "协会跟踪显示，平台化能力、数据治理能力和行业解决方案成为地理信息企业近阶段的核心竞争点。",
+    "coverImage": "deep-ocean",
+    "sourceName": "中国地理信息产业协会",
+    "sourceUrl": "https://www.cagis.org.cn",
+    "originalUrl": "https://www.cagis.org.cn/Lists/content/id/4661.html",
+    "publishedAt": "2026-04-06T10:00:00+08:00",
+    "language": "zh",
+    "category": "enterprise",
+    "keywords": [
+      "地理信息",
+      "企业",
+      "数字化转型",
+      "平台化",
+      "行业观察"
+    ],
+    "regionTags": [
+      "全国"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "cagis-org",
+      "digital-twin"
+    ]
+  },
+  {
+    "id": "aircas-remote-sensing",
+    "slug": "aircas-remote-sensing",
+    "title": "空天信息团队开展灾害遥感监测新技术验证",
+    "summary": "围绕复杂地表场景的快速识别与变化检测，科研团队推进多源遥感协同监测与响应能力验证。",
+    "coverImage": "satellite-night",
+    "sourceName": "中国科学院空天信息创新研究院",
+    "sourceUrl": "https://www.aircas.ac.cn",
+    "originalUrl": "https://aircas.cas.cn/dtxw/rdxw/202603/t20260302_8146772.html",
+    "publishedAt": "2026-04-05T15:20:00+08:00",
+    "language": "zh",
+    "category": "technology",
+    "keywords": [
+      "空天信息",
+      "灾害监测",
+      "遥感",
+      "变化检测",
+      "多源协同"
+    ],
+    "regionTags": [
+      "全国"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "aircas-org",
+      "remote-sensing"
+    ]
+  },
+  {
+    "id": "mnr-monitoring-annual",
+    "slug": "mnr-monitoring-annual",
+    "title": "自然资源调查监测年度重点任务进一步明确",
+    "summary": "国家层面将围绕调查监测、基础测绘更新和时空信息服务能力提升，统筹推进年度工作重点。",
+    "coverImage": "copper-lines",
+    "sourceName": "中华人民共和国自然资源部",
+    "sourceUrl": "https://www.mnr.gov.cn",
+    "originalUrl": "https://www.mnr.gov.cn/dt/ywbb/202604/t20260408_2918008.html",
+    "publishedAt": "2026-04-05T09:00:00+08:00",
+    "language": "zh",
+    "category": "policy",
+    "keywords": [
+      "自然资源",
+      "调查监测",
+      "基础测绘",
+      "时空信息",
+      "政策部署"
+    ],
+    "regionTags": [
+      "全国"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "mnr-org",
+      "smart-surveying"
+    ]
+  },
+  {
+    "id": "csgpc-intelligent-surveying",
+    "slug": "csgpc-intelligent-surveying",
+    "title": "智能测绘与时空信息融合应用成为年度热点",
+    "summary": "围绕智能测绘、空间智能分析和行业场景落地，学术与产业交流进一步聚焦应用实效。",
+    "coverImage": "emerald-topo",
+    "sourceName": "中国测绘学会",
+    "sourceUrl": "https://www.csgpc.org",
+    "originalUrl": "https://www.csgpc.org/detail/24106.html",
+    "publishedAt": "2026-04-04T14:40:00+08:00",
+    "language": "zh",
+    "category": "technology",
+    "keywords": [
+      "智能测绘",
+      "时空信息",
+      "空间智能",
+      "应用落地"
+    ],
+    "regionTags": [
+      "全国"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "csgpc-org",
+      "smart-surveying"
+    ]
+  },
+  {
+    "id": "beibu-gulf-marine-platform",
+    "slug": "beibu-gulf-marine-platform",
+    "title": "北部湾推进海洋地理信息服务平台能力提升",
+    "summary": "围绕港航调度、海岸带监测和海洋资源管理，北部湾区域持续增强海洋地理信息服务能力。",
+    "coverImage": "marine-signal",
+    "sourceName": "广西壮族自治区人民政府",
+    "sourceUrl": "https://www.gxzf.gov.cn",
+    "originalUrl": "https://www.gxzf.gov.cn/zfwj/zxwj/t16343169.shtml",
+    "publishedAt": "2026-04-03T11:30:00+08:00",
+    "language": "zh",
+    "category": "enterprise",
+    "keywords": [
+      "北部湾",
+      "海洋地理信息",
+      "港航调度",
+      "海岸带监测"
+    ],
+    "regionTags": [
+      "广西",
+      "北部湾"
+    ],
+    "isGuangxiRelated": true,
+    "entityIds": [
+      "guangxi",
+      "beibu-gulf",
+      "gx-gov-org",
+      "digital-twin"
+    ]
+  },
+  {
+    "id": "gx-beidou-park",
+    "slug": "gx-beidou-park",
+    "title": "广西北斗产业园加快面向行业场景的时空服务供给",
+    "summary": "园区正在围绕北斗高精度定位、物流监管和城市治理场景，吸引空间信息服务企业协同发展。",
+    "coverImage": "navy-pulse",
+    "sourceName": "广西壮族自治区人民政府",
+    "sourceUrl": "https://www.gxzf.gov.cn",
+    "originalUrl": "https://www.gxzf.gov.cn/zfwj/zxwj/t19071166.shtml",
+    "publishedAt": "2026-04-02T16:10:00+08:00",
+    "language": "zh",
+    "category": "enterprise",
+    "keywords": [
+      "广西",
+      "北斗产业园",
+      "高精度定位",
+      "时空服务",
+      "产业协同"
+    ],
+    "regionTags": [
+      "广西"
+    ],
+    "isGuangxiRelated": true,
+    "entityIds": [
+      "guangxi",
+      "gx-gov-org",
+      "gx-beidou-park",
+      "beidou-application"
+    ]
+  },
+  {
+    "id": "ogc-digital-twins",
+    "slug": "ogc-digital-twins",
+    "title": "OGC expands work on interoperable digital twin standards",
+    "summary": "The standards community is aligning geospatial interoperability work with digital twin delivery patterns for cities, infrastructure and climate services.",
+    "coverImage": "aurora-mesh",
+    "sourceName": "Open Geospatial Consortium",
+    "sourceUrl": "https://www.ogc.org",
+    "originalUrl": "https://www.ogc.org/blog-article/common-challenges-in-geospatial-integration/",
+    "publishedAt": "2026-04-02T08:00:00+00:00",
+    "language": "en",
+    "category": "technology",
+    "keywords": [
+      "OGC",
+      "interoperability",
+      "digital twin",
+      "standards",
+      "geospatial"
+    ],
+    "regionTags": [
+      "International"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "digital-twin"
+    ]
+  },
+  {
+    "id": "esa-earth-observation",
+    "slug": "esa-earth-observation",
+    "title": "Earth observation services support climate resilience planning",
+    "summary": "Satellite-driven Earth observation products continue to improve environmental monitoring, risk awareness and regional resilience planning.",
+    "coverImage": "polar-orbit",
+    "sourceName": "European Space Agency",
+    "sourceUrl": "https://www.esa.int",
+    "originalUrl": "https://www.esa.int/Applications/Observing_the_Earth/ESA_s_Digital_Twin_Earth_programme_building_a_virtual_model_for_a_changing_planet",
+    "publishedAt": "2026-04-01T09:00:00+00:00",
+    "language": "en",
+    "category": "technology",
+    "keywords": [
+      "Earth observation",
+      "climate resilience",
+      "satellite",
+      "remote sensing"
+    ],
+    "regionTags": [
+      "International"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "remote-sensing"
+    ]
+  },
+  {
+    "id": "gx-service-capacity",
+    "slug": "gx-service-capacity",
+    "title": "广西持续提升地理信息公共服务能力",
+    "summary": "自治区层面继续推进基础地理信息共享、公共服务接口优化和重点行业时空应用支撑体系建设。",
+    "coverImage": "lagoon-grid",
+    "sourceName": "广西壮族自治区人民政府",
+    "sourceUrl": "https://www.gxzf.gov.cn",
+    "originalUrl": "https://www.gxzf.gov.cn/zfwj/zxwj/t27094468.shtml",
+    "publishedAt": "2026-03-31T13:00:00+08:00",
+    "language": "zh",
+    "category": "policy",
+    "keywords": [
+      "广西",
+      "公共服务",
+      "地理信息",
+      "共享开放",
+      "服务能力提升"
+    ],
+    "regionTags": [
+      "广西"
+    ],
+    "isGuangxiRelated": true,
+    "entityIds": [
+      "guangxi",
+      "gx-gov-org",
+      "gx-geo-service-plan"
+    ]
+  },
+  {
+    "id": "supermap-geoai",
+    "slug": "supermap-geoai",
+    "title": "GeoAI platform capability extends digital twin delivery",
+    "summary": "Enterprise GIS platforms are strengthening GeoAI workflows, scenario modeling and 3D spatial analysis for urban and industrial customers.",
+    "coverImage": "graphite-shore",
+    "sourceName": "超图软件",
+    "sourceUrl": "https://www.supermap.com",
+    "originalUrl": "https://www.supermap.com/zh-cn/a/news/2_3711.html",
+    "publishedAt": "2026-03-30T10:10:00+08:00",
+    "language": "en",
+    "category": "enterprise",
+    "keywords": [
+      "GeoAI",
+      "digital twin",
+      "3D GIS",
+      "enterprise platform"
+    ],
+    "regionTags": [
+      "全国"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "supermap-org",
+      "digital-twin",
+      "real-scene-3d"
+    ]
+  },
+  {
+    "id": "whu-lab-spatial-intelligence",
+    "slug": "whu-lab-spatial-intelligence",
+    "title": "高校实验室关注空间智能与遥感协同方向",
+    "summary": "围绕空间智能算法、多源遥感数据处理和高精度测绘，高校科研动态继续向产业协同需求靠拢。",
+    "coverImage": "scholar-blueprint",
+    "sourceName": "武汉大学测绘学院",
+    "sourceUrl": "https://sgg.whu.edu.cn",
+    "originalUrl": "https://www.sgg.whu.edu.cn/info/1365/45081.htm",
+    "publishedAt": "2026-03-29T09:40:00+08:00",
+    "language": "zh",
+    "category": "technology",
+    "keywords": [
+      "空间智能",
+      "多源遥感",
+      "高精度测绘",
+      "科研协同"
+    ],
+    "regionTags": [
+      "全国"
+    ],
+    "isGuangxiRelated": false,
+    "entityIds": [
+      "whu-org",
+      "remote-sensing",
+      "smart-surveying"
+    ]
+  }
+]

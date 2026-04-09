@@ -1,0 +1,209 @@
+﻿[
+  {
+    "id": "guangxi",
+    "name": "广西",
+    "type": "region",
+    "aliases": ["广西壮族自治区", "桂"],
+    "intro": "广西是网站聚焦的核心区域，承接地球信息产业链中的政策、园区、企业与应用场景落地。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "nanning",
+    "name": "南宁",
+    "type": "region",
+    "aliases": ["邕城", "首府南宁"],
+    "intro": "南宁是广西地球信息产业项目、平台与园区资源的重要集聚城市。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "beibu-gulf",
+    "name": "北部湾",
+    "type": "region",
+    "aliases": ["广西北部湾"],
+    "intro": "北部湾是广西海洋地理信息、港航调度与海岸带监测应用的重点区域。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "gx-gov-org",
+    "name": "广西壮族自治区人民政府",
+    "type": "institution",
+    "aliases": ["广西政府", "自治区人民政府"],
+    "intro": "自治区级综合政务主体，负责推动地球信息产业政策、园区布局与重大场景建设。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "gx-dnr-org",
+    "name": "广西壮族自治区自然资源厅",
+    "type": "institution",
+    "aliases": ["广西自然资源厅"],
+    "intro": "承担广西测绘地理信息、实景三维、国土空间治理与自然资源数字化推进任务。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "mnr-org",
+    "name": "自然资源部",
+    "type": "institution",
+    "aliases": ["中华人民共和国自然资源部"],
+    "intro": "国家层面的自然资源、测绘与地理信息主管部门，是产业政策与行业标准的重要来源。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "cagis-org",
+    "name": "中国地理信息产业协会",
+    "type": "institution",
+    "aliases": ["地信协会", "中国地理信息产业协会"],
+    "intro": "连接产业企业、市场需求与行业观察的重要协会组织。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "csgpc-org",
+    "name": "中国测绘学会",
+    "type": "institution",
+    "aliases": ["测绘学会", "中国测绘学会"],
+    "intro": "围绕测绘科技、空间智能与时空信息应用进行学术组织和行业交流。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "aircas-org",
+    "name": "中国科学院空天信息创新研究院",
+    "type": "institution",
+    "aliases": ["空天院", "AIRCAS", "空天信息创新研究院"],
+    "intro": "在空天信息、遥感监测与卫星应用方向承担关键科研与技术转化工作。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "whu-org",
+    "name": "武汉大学测绘学院",
+    "type": "university",
+    "aliases": ["武大测绘", "武汉大学测绘学院"],
+    "intro": "在测绘遥感、空间智能和人才培养领域持续输出科研能力。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "supermap-org",
+    "name": "超图软件",
+    "type": "enterprise",
+    "aliases": ["SuperMap", "超图"],
+    "intro": "国内头部 GIS 平台企业，连接时空平台、数字孪生与行业场景落地。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "guangxi-enterprise-cluster",
+    "name": "广西地球信息企业集群",
+    "type": "enterprise",
+    "aliases": ["广西地信企业", "地理信息企业", "产业企业"],
+    "intro": "聚合广西本地地球信息企业、服务商与解决方案供给能力的产业主体集合。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "gx-beidou-park",
+    "name": "广西北斗产业园",
+    "type": "park",
+    "aliases": ["北斗产业园", "广西北斗产业园"],
+    "intro": "围绕北斗应用、时空服务与产业孵化构建的广西重点园区载体。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "gx-industry-policy",
+    "name": "广西地球信息产业政策体系",
+    "type": "policy",
+    "aliases": ["产业发展政策", "服务能力提升行动", "政策标准体系", "广西地理信息服务能力提升行动"],
+    "intro": "以自治区政策、专项行动与行业规范构成的地球信息产业发展政策支撑体系。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "natural-resource-governance",
+    "name": "自然资源数字治理",
+    "type": "project",
+    "aliases": ["自然资源治理", "国土空间治理", "自然资源数字化"],
+    "intro": "依托地球信息能力支撑国土空间规划、资源监管、项目用地与公共服务的重点治理场景。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "low-altitude-economy",
+    "name": "低空经济场景",
+    "type": "project",
+    "aliases": ["低空经济", "低空场景"],
+    "intro": "以低空遥感、无人机作业和时空底座为支撑的新型产业场景。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "marine-service-scenarios",
+    "name": "海洋与港航服务场景",
+    "type": "project",
+    "aliases": ["海洋地理信息服务", "港航调度", "海岸带监测", "海洋服务平台"],
+    "intro": "面向北部湾海洋管理、港航调度和海岸带监测的典型地球信息应用场景。",
+    "region": "广西",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "remote-sensing",
+    "name": "遥感与卫星数据获取",
+    "type": "technology",
+    "aliases": ["遥感", "卫星遥感", "Earth observation", "remote sensing"],
+    "intro": "产业链上游的数据获取层，提供卫星观测、灾害监测与地表变化识别能力。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "beidou-application",
+    "name": "北斗定位与时空服务",
+    "type": "technology",
+    "aliases": ["北斗应用", "北斗时空服务", "高精度定位"],
+    "intro": "围绕定位、授时和轨迹服务，为园区、物流和城市治理提供时空基础能力。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "real-scene-3d",
+    "name": "实景三维建模",
+    "type": "technology",
+    "aliases": ["实景三维", "三维建模", "3D real scene"],
+    "intro": "将测绘成果转化为三维空间底座，是数字孪生与空间治理的基础能力层。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "gis-platform",
+    "name": "GIS时空平台",
+    "type": "technology",
+    "aliases": ["GIS平台", "地理信息平台", "时空平台", "时空底座", "地理信息服务平台"],
+    "intro": "承接空间数据汇聚、服务发布和行业应用开发，是产业链中游的平台能力层。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "geo-ai",
+    "name": "GeoAI与空间智能",
+    "type": "technology",
+    "aliases": ["GeoAI", "空间智能", "智能测绘", "智慧测绘"],
+    "intro": "通过 AI 与空间分析融合，提升遥感解译、测绘生产和行业场景决策能力。",
+    "region": "全国",
+    "relatedArticleIds": []
+  },
+  {
+    "id": "digital-twin",
+    "name": "数字孪生应用",
+    "type": "technology",
+    "aliases": ["digital twin", "数字孪生", "数字底座"],
+    "intro": "连接平台能力与行业场景，实现虚实映射、动态感知和业务仿真。",
+    "region": "全国",
+    "relatedArticleIds": []
+  }
+]

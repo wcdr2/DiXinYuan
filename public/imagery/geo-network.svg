@@ -1,0 +1,53 @@
+﻿<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <g opacity="0.24" stroke="#D7F6FF" stroke-width="1">
+    <path d="M0 160H1200"/>
+    <path d="M0 320H1200"/>
+    <path d="M0 480H1200"/>
+    <path d="M0 640H1200"/>
+    <path d="M200 0V800"/>
+    <path d="M400 0V800"/>
+    <path d="M600 0V800"/>
+    <path d="M800 0V800"/>
+    <path d="M1000 0V800"/>
+  </g>
+  <g stroke="#7DEBFF" stroke-opacity="0.72" stroke-width="2.4" stroke-linecap="round" filter="url(#glow)">
+    <path d="M122 194L280 250L412 204L540 284L672 222L848 308L1032 238L1128 302"/>
+    <path d="M188 590L328 482L470 532L620 444L754 512L920 432L1072 500"/>
+    <path d="M280 250L328 482"/>
+    <path d="M412 204L470 532"/>
+    <path d="M672 222L620 444"/>
+    <path d="M848 308L920 432"/>
+    <path d="M1032 238L1072 500"/>
+  </g>
+  <g fill="#AEF7FF" filter="url(#glow)">
+    <circle cx="122" cy="194" r="8"/>
+    <circle cx="280" cy="250" r="8"/>
+    <circle cx="412" cy="204" r="9"/>
+    <circle cx="540" cy="284" r="9"/>
+    <circle cx="672" cy="222" r="10"/>
+    <circle cx="848" cy="308" r="9"/>
+    <circle cx="1032" cy="238" r="10"/>
+    <circle cx="1128" cy="302" r="8"/>
+    <circle cx="188" cy="590" r="9"/>
+    <circle cx="328" cy="482" r="9"/>
+    <circle cx="470" cy="532" r="10"/>
+    <circle cx="620" cy="444" r="11"/>
+    <circle cx="754" cy="512" r="9"/>
+    <circle cx="920" cy="432" r="11"/>
+    <circle cx="1072" cy="500" r="10"/>
+  </g>
+  <defs>
+    <linearGradient id="bg" x1="600" y1="0" x2="600" y2="800" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#587EB3" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#86C7D5" stop-opacity="0.5"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="1200" height="800" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
