@@ -14,7 +14,7 @@ export function ArticleCard({ article, locale, variant = "default" }: ArticleCar
   const href = getArticleHref(locale, article);
   const cover = getCoverSurface(article.coverImage);
   const sourceAccess = getSourceAccessUrls(article.originalUrl, article.sourceUrl);
-  const backupLabel = locale === "zh" ? "备用网址" : "Backup";
+  const backupLabel = locale === "zh" ? "镜像访问" : "Mirror";
 
   return (
     <article className={`article-card article-card--${variant}`}>

@@ -140,6 +140,7 @@ const articleRouteSet = new Set();
 const articleSourceNames = new Set(articles.map((article) => article.sourceName));
 const sourceNameSet = new Set(sources.map((source) => source.name));
 const entityIdSet = new Set(graph.entities.map((entity) => entity.id));
+const elementCounts = new Map();
 
 for (const article of articles) {
   if (!article.id || articleIdSet.has(article.id)) {
@@ -202,6 +203,12 @@ for (const source of sources) {
 }
 
 for (const entity of graph.entities) {
+  if (!entity.elementClass) {
+    errors.push(`Entity missing elementClass: ${entity.id}`);
+  } else {
+    elementCounts.set(entity.elementClass, (elementCounts.get(entity.elementClass) ?? 0) + 1);
+  }
+
   for (const articleId of entity.relatedArticleIds) {
     if (!articleIdSet.has(articleId)) {
       errors.push(`Entity references missing article: ${entity.id} -> ${articleId}`);
@@ -214,11 +221,37 @@ for (const edge of graph.edges) {
     errors.push(`Graph edge references missing entity: ${edge.sourceEntityId} -> ${edge.targetEntityId}`);
   }
 
+  if ((!edge.evidenceArticleIds || edge.evidenceArticleIds.length === 0) && (!edge.evidenceRefs || edge.evidenceRefs.length === 0)) {
+    errors.push(`Graph edge has no evidence: ${edge.sourceEntityId} -> ${edge.targetEntityId}`);
+  }
+
   for (const articleId of edge.evidenceArticleIds ?? []) {
     if (!articleIdSet.has(articleId)) {
       errors.push(`Graph edge references missing evidence article: ${edge.sourceEntityId} -> ${articleId}`);
     }
   }
+}
+
+for (const requiredClass of ["subject", "goal", "content", "activity", "evaluation"]) {
+  if (!elementCounts.get(requiredClass)) {
+    errors.push(`Knowledge graph layer is empty: ${requiredClass}`);
+  }
+}
+
+if ((graph.entities?.length ?? 0) < 60) {
+  errors.push(`Knowledge graph entity count is too small: ${graph.entities.length}`);
+}
+
+if ((graph.edges?.length ?? 0) < 100) {
+  errors.push(`Knowledge graph edge count is too small: ${graph.edges.length}`);
+}
+
+if (!Array.isArray(graph.regionScopes) || graph.regionScopes.length < 6) {
+  errors.push("Knowledge graph regionScopes are missing or incomplete.");
+}
+
+if (!graph.views?.layered?.columns || graph.views.layered.columns.length !== 5) {
+  errors.push("Knowledge graph layered view columns are missing or incomplete.");
 }
 
 for (const category of ["all", "enterprise", "technology", "policy"]) {

@@ -22,6 +22,61 @@ export type EntityType =
   | "technology"
   | "region";
 
+export type GraphElementClass =
+  | "subject"
+  | "goal"
+  | "content"
+  | "activity"
+  | "evaluation";
+
+export type GraphRelationType =
+  | "related"
+  | "guides"
+  | "drives"
+  | "supports"
+  | "located_in"
+  | "pursues"
+  | "organizes"
+  | "focuses_on"
+  | "enables"
+  | "constrains"
+  | "collaborates_with"
+  | "assesses";
+
+export interface Scorecard {
+  factorSupport: number;
+  carrierCapacity: number;
+  collaborationLevel: number;
+  applicationOutput: number;
+  comprehensiveBenefit: number;
+}
+
+export interface EvidenceRef {
+  id?: string;
+  kind: "article" | "research";
+  title: string;
+  articleId?: string;
+  sourceLabel: string;
+  url?: string;
+  publishedAt?: string;
+}
+
+export interface GraphTaxonomyItem {
+  key: GraphElementClass;
+  labelZh: string;
+  labelEn: string;
+  descriptionZh: string;
+  descriptionEn: string;
+}
+
+export interface GraphRegionScope {
+  id: string;
+  labelZh: string;
+  labelEn: string;
+  spatialScope: "province" | "city" | "park" | "project";
+  parentId?: string;
+}
+
 export interface CrawlRule {
   mode: "seed" | "seed-or-rss" | "rss" | "homepage-monitor" | "api";
   entryUrl?: string;
@@ -79,24 +134,44 @@ export interface Entity {
   intro: string;
   region: string;
   relatedArticleIds: string[];
+  elementClass?: GraphElementClass;
+  subtype?: string;
+  spatialScope?: "province" | "city" | "park" | "project";
+  parentId?: string;
+  regionIds?: string[];
+  tags?: string[];
+  scorecard?: Scorecard;
+  displayOrder?: number;
 }
 
 export interface GraphEdge {
   sourceEntityId: string;
   targetEntityId: string;
-  relationType:
-    | "related"
-    | "guides"
-    | "drives"
-    | "supports"
-    | "located_in";
+  relationType: GraphRelationType;
   evidenceArticleIds: string[];
+  evidenceRefs?: EvidenceRef[];
   weight: number;
+  viewModes?: Array<"layered" | "network">;
 }
 
 export interface GraphDataset {
   entities: Entity[];
   edges: GraphEdge[];
+  regionScopes?: GraphRegionScope[];
+  taxonomy?: {
+    elementClasses: GraphTaxonomyItem[];
+  };
+  views?: {
+    layered?: {
+      columns: Array<{
+        elementClass: GraphElementClass;
+        entityIds?: string[];
+      }>;
+    };
+    network?: {
+      featuredEntityId?: string;
+    };
+  };
 }
 
 export interface CrawlLog {

@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { graphResearchBase } from "../datasets/seed/graph-research-base.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -775,9 +776,138 @@ function collectBlueprintEvidence(articles, sourceEntity, targetEntity, extraTer
   ).slice(0, 6);
 }
 
+function toRegionScopeId(value) {
+  const mapping = {
+    广西: "guangxi",
+    南宁: "nanning",
+    北部湾: "beibu-gulf",
+    柳州: "liuzhou",
+    桂林: "guilin",
+    北海: "beihai",
+    钦州: "qinzhou",
+    防城港: "fangchenggang",
+  };
+
+  return mapping[String(value ?? "").trim()] ?? "";
+}
+
+function inferElementClass(entity) {
+  if (entity.elementClass) {
+    return entity.elementClass;
+  }
+
+  const mapping = {
+    policy: "goal",
+    enterprise: "subject",
+    institution: "subject",
+    university: "subject",
+    park: "subject",
+    project: "activity",
+    technology: "activity",
+    region: "content",
+  };
+
+  return mapping[entity.type] ?? "content";
+}
+
+function mergeBaseEntities(seedEntities, researchEntities) {
+  const merged = new Map();
+  const applyEntity = (entity, index, isResearch) => {
+    const current = merged.get(entity.id) ?? {};
+    const defaultRegionId = toRegionScopeId(entity.region);
+    const mergedAliases = unique([...(current.aliases ?? []), ...(entity.aliases ?? [])]);
+    const mergedTags = unique([...(current.tags ?? []), ...(entity.tags ?? [])]);
+    const mergedArticleIds = unique([...(current.relatedArticleIds ?? []), ...(entity.relatedArticleIds ?? [])]);
+    const mergedRegionIds = unique([
+      ...(current.regionIds ?? []),
+      ...(entity.regionIds ?? []),
+      ...(defaultRegionId ? [defaultRegionId] : []),
+    ]);
+
+    merged.set(entity.id, {
+      ...current,
+      ...entity,
+      elementClass: inferElementClass({ ...current, ...entity }),
+      subtype: entity.subtype ?? current.subtype ?? entity.type,
+      aliases: mergedAliases,
+      tags: mergedTags,
+      regionIds: mergedRegionIds,
+      relatedArticleIds: mergedArticleIds,
+      displayOrder:
+        entity.displayOrder ??
+        current.displayOrder ??
+        (isResearch ? index : index + researchEntities.length + 100),
+    });
+  };
+
+  researchEntities.forEach((entity, index) => applyEntity(entity, index, true));
+  seedEntities.forEach((entity, index) => applyEntity(entity, index, false));
+  return [...merged.values()];
+}
+
+function uniqueEvidenceRefs(refs) {
+  const seen = new Set();
+  return refs.filter((ref) => {
+    const key = ref.kind === "article" ? `article:${ref.articleId}` : `research:${ref.id ?? ref.title}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function createArticleEvidenceRefs(articleIds, articleLookup) {
+  return articleIds
+    .map((articleId) => articleLookup.get(articleId))
+    .filter(Boolean)
+    .map((article) => ({
+      kind: "article",
+      articleId: article.id,
+      title: article.title,
+      sourceLabel: article.sourceName,
+      url: article.originalUrl,
+      publishedAt: article.publishedAt,
+    }));
+}
+
+function createResearchEvidenceRefs(researchEvidenceIds, evidenceLookup) {
+  return (researchEvidenceIds ?? [])
+    .map((evidenceId) => evidenceLookup.get(evidenceId))
+    .filter(Boolean)
+    .map((evidence) => ({ ...evidence }));
+}
+
+function collectGraphEdgeEvidence(articles, articleLookup, evidenceLookup, sourceEntity, targetEntity, blueprint) {
+  const evidenceArticleIds = collectBlueprintEvidence(
+    articles,
+    sourceEntity,
+    targetEntity,
+    blueprint.keywords ?? [],
+  );
+  const articleRefs = createArticleEvidenceRefs(evidenceArticleIds, articleLookup);
+  const researchRefs = createResearchEvidenceRefs(blueprint.researchEvidenceIds, evidenceLookup);
+  const evidenceRefs = uniqueEvidenceRefs([...articleRefs, ...researchRefs]).slice(0, 8);
+  const weight =
+    evidenceArticleIds.reduce(
+      (total, articleId) => total + (articleLookup.get(articleId)?.isGuangxiRelated ? 2 : 1),
+      0,
+    ) + researchRefs.length;
+
+  return {
+    evidenceArticleIds,
+    evidenceRefs,
+    weight,
+  };
+}
+
 function buildKnowledgeGraph(articles, baseEntities) {
   const articleLookup = new Map(articles.map((article) => [article.id, article]));
+  const evidenceLookup = new Map(
+    graphResearchBase.researchEvidence.map((evidence) => [evidence.id, evidence]),
+  );
   const entityMap = new Map(baseEntities.map((entity) => [entity.id, { ...entity, relatedArticleIds: [] }]));
+  const elementOrder = graphResearchBase.taxonomy.elementClasses.map((item) => item.key);
 
   articles.forEach((article) => {
     article.entityIds.forEach((entityId) => {
@@ -791,7 +921,7 @@ function buildKnowledgeGraph(articles, baseEntities) {
     });
   });
 
-  const edges = industryChainBlueprint
+  const edges = graphResearchBase.edges
     .map((blueprint) => {
       const sourceEntity = entityMap.get(blueprint.sourceEntityId);
       const targetEntity = entityMap.get(blueprint.targetEntityId);
@@ -799,14 +929,16 @@ function buildKnowledgeGraph(articles, baseEntities) {
         return null;
       }
 
-      const evidenceArticleIds = collectBlueprintEvidence(
+      const { evidenceArticleIds, evidenceRefs, weight } = collectGraphEdgeEvidence(
         articles,
+        articleLookup,
+        evidenceLookup,
         sourceEntity,
         targetEntity,
-        blueprint.keywords ?? [],
+        blueprint,
       );
 
-      if (evidenceArticleIds.length === 0) {
+      if (evidenceRefs.length === 0) {
         return null;
       }
 
@@ -814,15 +946,19 @@ function buildKnowledgeGraph(articles, baseEntities) {
         sourceEntityId: blueprint.sourceEntityId,
         targetEntityId: blueprint.targetEntityId,
         relationType: blueprint.relationType,
+        viewModes: blueprint.viewModes ?? ["layered", "network"],
         evidenceArticleIds,
-        weight: evidenceArticleIds.reduce(
-          (total, articleId) => total + (articleLookup.get(articleId)?.isGuangxiRelated ? 2 : 1),
-          0,
-        ),
+        evidenceRefs,
+        weight,
       };
     })
     .filter(Boolean)
-    .sort((left, right) => right.weight - left.weight);
+    .sort(
+      (left, right) =>
+        right.weight - left.weight ||
+        left.sourceEntityId.localeCompare(right.sourceEntityId, "zh-CN") ||
+        left.targetEntityId.localeCompare(right.targetEntityId, "zh-CN"),
+    );
 
   edges.forEach((edge) => {
     edge.evidenceArticleIds.forEach((articleId) => {
@@ -842,9 +978,34 @@ function buildKnowledgeGraph(articles, baseEntities) {
   const edgeEntityIds = new Set(edges.flatMap((edge) => [edge.sourceEntityId, edge.targetEntityId]));
   const entities = [...entityMap.values()]
     .filter((entity) => edgeEntityIds.has(entity.id) || entity.relatedArticleIds.length > 0 || entity.id === "guangxi")
-    .sort((left, right) => right.relatedArticleIds.length - left.relatedArticleIds.length || left.name.localeCompare(right.name, "zh-CN"));
+    .sort((left, right) => {
+      const leftElement = elementOrder.indexOf(left.elementClass ?? "content");
+      const rightElement = elementOrder.indexOf(right.elementClass ?? "content");
+      return (
+        leftElement - rightElement ||
+        (left.displayOrder ?? 9999) - (right.displayOrder ?? 9999) ||
+        right.relatedArticleIds.length - left.relatedArticleIds.length ||
+        left.name.localeCompare(right.name, "zh-CN")
+      );
+    });
 
-  return { entities, edges };
+  return {
+    entities,
+    edges,
+    regionScopes: graphResearchBase.regionScopes,
+    taxonomy: graphResearchBase.taxonomy,
+    views: {
+      layered: {
+        columns: graphResearchBase.views.layered.columns.map((column) => ({
+          ...column,
+          entityIds: entities
+            .filter((entity) => entity.elementClass === column.elementClass)
+            .map((entity) => entity.id),
+        })),
+      },
+      network: graphResearchBase.views.network,
+    },
+  };
 }
 
 function buildSummary(articles, sources, graph) {
@@ -1314,11 +1475,12 @@ function finalizeLogs(sources, crawlResults, dedupedArticles, fallbackSeedArticl
 async function main() {
   await mkdir(generatedDir, { recursive: true });
 
-  const [sources, seedArticles, baseEntities] = await Promise.all([
+  const [sources, seedArticles, seedBaseEntities] = await Promise.all([
     readJson(path.join(configDir, "sources.json")),
     readJson(path.join(seedDir, "articles.json")),
     readJson(path.join(seedDir, "entities.json")),
   ]);
+  const baseEntities = mergeBaseEntities(seedBaseEntities, graphResearchBase.entities);
 
   const crawlResults = [];
   for (const source of sources.filter((item) => item.isActive)) {

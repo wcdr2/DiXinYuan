@@ -154,7 +154,7 @@ export default async function NewsDetailPage({ params }: NewsDetailProps) {
             </a>
             {sourceAccess.backupUrl ? (
               <a href={sourceAccess.backupUrl} className="text-link text-link--muted" target="_blank" rel="noreferrer noopener">
-                {lang === "zh" ? "备用网址" : "Backup"}
+                {lang === "zh" ? "镜像访问" : "Mirror"}
               </a>
             ) : null}
           </section>

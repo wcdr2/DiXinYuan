@@ -75,7 +75,6 @@ export default async function HomePage({ params }: HomePageProps) {
             <h1 className="home-hero__title">
               <span className="home-hero__title-line">
                 <span>{dict.hero.titleTop}</span>
-                <strong>{dict.hero.titleHighlight}</strong>
               </span>
               <span className="home-hero__title-line home-hero__title-line--bottom">
                 <span>{dict.hero.titleBottom}</span>

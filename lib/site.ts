@@ -83,13 +83,13 @@ export const dictionaries = {
     hero: {
       eyebrow: "Guangxi Geo-Industry Intelligence",
       titleTop: "广西地球信息",
-      titleHighlight: "产业发展",
-      titleBottom: "研究门户",
+      titleHighlight: "",
+      titleBottom: "产业发展研究",
       title: "聚焦广西地球信息产业的可信观察与可视分析",
       summary:
         "围绕企业、技术与政策三条主线，网站通过权威来源白名单、结构化数据加工和双语界面呈现，形成更接近研究机构门户的信息服务体验。",
       primaryCta: "浏览最新新闻",
-      secondaryCta: "查看产业链知识图谱",
+      secondaryCta: "查看赋能知识图谱",
       statArticles: "已整理新闻",
       statSources: "白名单来源",
       statGraph: "图谱节点",
@@ -118,9 +118,9 @@ export const dictionaries = {
       newsSummary: "浏览来自白名单来源的新闻摘要，可按栏目、来源、时间和广西相关性筛选。",
       cloudTitle: "产业词云",
       cloudSummary: "基于最近 30 天已发布新闻提取关键词，支持按栏目查看并跳转至对应结果。",
-      graphTitle: "地球信息产业链知识图谱",
+      graphTitle: "地球空间信息赋能知识图谱",
       graphSummary:
-        "围绕上游感知、中游平台智能与下游场景应用构建地球信息产业链图谱，可查看实体简介、链路关系与证据新闻。",
+        "围绕主体、目标、内容、活动、评价五类要素构建广西地球空间信息赋能知识图谱，并用新闻证据与调研依据共同支撑结构化展示。",
       sourcesTitle: "数据来源与自动更新说明",
       sourcesSummary: "仅允许进入白名单的权威来源参与自动发布链路，并保留抓取日志、原文链接和来源说明。",
       aboutTitle: "项目介绍",
@@ -156,11 +156,19 @@ export const dictionaries = {
       empty: "当前暂无可展示的热词。",
     },
     graph: {
-      selectPrompt: "点击产业链节点查看实体简介、关联关系和证据文章。",
+      selectPrompt: "默认展示五类要素分层图谱，可切换关系网络图并查看节点详情、评价维度与证据。",
       empty: "当前筛选条件下暂无节点。",
       evidence: "证据新闻",
       relations: "关联关系",
-      filterAll: "全部类型",
+      filterAll: "全部要素",
+      filterRegionAll: "全部区域",
+      viewLayered: "分层图谱",
+      viewNetwork: "关系网络图",
+      focusSelected: "聚焦当前节点",
+      showAllEdges: "显示全部关系",
+      detailTitle: "节点详情",
+      evidenceMixed: "证据与依据",
+      scorecard: "评价雷达",
     },
     sources: {
       whitelistTitle: "白名单来源",
@@ -205,13 +213,13 @@ export const dictionaries = {
     hero: {
       eyebrow: "Guangxi Geo-Industry Intelligence",
       titleTop: "Guangxi Geospatial",
-      titleHighlight: "Industry Development",
-      titleBottom: "Research Portal",
+      titleHighlight: "",
+      titleBottom: "Industry Development Research",
       title: "Trusted observation and visual analysis for Guangxi's geospatial industry",
       summary:
         "The portal organizes enterprise, technology and policy signals from curated sources, then presents them through a bilingual research-portal experience.",
       primaryCta: "Browse latest news",
-      secondaryCta: "Open the industry-chain graph",
+      secondaryCta: "Open the enablement graph",
       statArticles: "Curated articles",
       statSources: "Trusted sources",
       statGraph: "Graph entities",
@@ -240,9 +248,9 @@ export const dictionaries = {
       newsSummary: "Browse structured article summaries from trusted sources with filtering by category, source, time and Guangxi relevance.",
       cloudTitle: "Industry Word Cloud",
       cloudSummary: "Keywords are generated from the latest 30-day article set and can route into filtered news results.",
-      graphTitle: "Geospatial Industry-Chain Graph",
+      graphTitle: "Geospatial Enablement Knowledge Graph",
       graphSummary:
-        "The graph reconstructs the geospatial industry chain across sensing, platforms, intelligence and Guangxi application scenarios, with linked evidence articles.",
+        "The graph organizes Guangxi geospatial enablement through five layers: subject, goal, content, activity and evaluation, backed by news evidence and research notes.",
       sourcesTitle: "Source Policy and Update Notes",
       sourcesSummary: "Only trusted sources can enter the auto-publication chain, and each item keeps its source link and update log record.",
       aboutTitle: "About the Project",
@@ -278,11 +286,19 @@ export const dictionaries = {
       empty: "No terms are available right now.",
     },
     graph: {
-      selectPrompt: "Select an industry-chain node to inspect the entity profile, linked relations and evidence articles.",
+      selectPrompt: "The default view is a layered five-element graph. You can switch to the network view and inspect node details, scorecards and evidence.",
       empty: "No nodes under the current filter.",
       evidence: "Evidence articles",
       relations: "Relations",
-      filterAll: "All types",
+      filterAll: "All layers",
+      filterRegionAll: "All regions",
+      viewLayered: "Layered graph",
+      viewNetwork: "Network view",
+      focusSelected: "Focus selected",
+      showAllEdges: "Show all relations",
+      detailTitle: "Node detail",
+      evidenceMixed: "Evidence and notes",
+      scorecard: "Scorecard",
     },
     sources: {
       whitelistTitle: "Trusted sources",
@@ -366,6 +382,13 @@ const forceMirrorHosts = new Set([
   "dnr.gxzf.gov.cn",
   "gzw.gxzf.gov.cn",
   "gxt.gxzf.gov.cn",
+  "www.mnr.gov.cn",
+  "www.cagis.org.cn",
+  "www.csgpc.org",
+  "aircas.cas.cn",
+  "www.aircas.ac.cn",
+  "www.supermap.com",
+  "www.sgg.whu.edu.cn",
 ]);
 
 function isHttpUrl(value: string) {
@@ -377,18 +400,33 @@ function isHttpUrl(value: string) {
   }
 }
 
-function buildTextMirrorUrl(url: string) {
+function buildWebArchiveMirrorUrl(url: string) {
   if (!isHttpUrl(url)) {
     return "";
   }
-
   try {
-    const parsed = new URL(url);
-    const normalizedPath = `${parsed.pathname}${parsed.search}`;
-    return `https://r.jina.ai/${parsed.protocol}//${parsed.host}${normalizedPath}`;
+    return `https://web.archive.org/web/${url}`;
   } catch {
     return "";
   }
+}
+
+function buildGoogleSearchUrl(url: string) {
+  if (!isHttpUrl(url)) {
+    return "";
+  }
+  try {
+    const parsed = new URL(url);
+    return `https://www.google.com/search?q=site:${parsed.hostname}${parsed.pathname}`;
+  } catch {
+    return "";
+  }
+}
+
+function buildMirrorUrl(url: string) {
+  const archive = buildWebArchiveMirrorUrl(url);
+  if (archive) return archive;
+  return buildGoogleSearchUrl(url);
 }
 
 function uniqueUrls(values: Array<string | undefined>) {
@@ -411,23 +449,26 @@ export function getSourceAccessUrls(originalUrl: string, sourceUrl: string) {
 
   try {
     const host = new URL(primaryUrl).hostname.toLowerCase();
-    const mirrorUrl = buildTextMirrorUrl(primaryUrl);
 
-    if ((forceMirrorHosts.has(host) || preferredMirrorHosts.has(host)) && mirrorUrl) {
-      usedMirror = true;
-      const originalPrimary = primaryUrl;
-      primaryUrl = mirrorUrl;
-      backupUrl = originalPrimary;
-      return {
-        primaryUrl,
-        backupUrl,
-        usedMirror,
-      };
+    if (forceMirrorHosts.has(host) || preferredMirrorHosts.has(host)) {
+      const mirrorUrl = buildMirrorUrl(primaryUrl);
+      if (mirrorUrl) {
+        usedMirror = true;
+        backupUrl = mirrorUrl;
+        return {
+          primaryUrl,
+          backupUrl,
+          usedMirror,
+        };
+      }
     }
 
-    if (!backupUrl && mirrorUrl && mirrorUrl !== primaryUrl) {
-      backupUrl = mirrorUrl;
-      usedMirror = true;
+    if (!backupUrl) {
+      const mirrorUrl = buildMirrorUrl(primaryUrl);
+      if (mirrorUrl && mirrorUrl !== primaryUrl) {
+        backupUrl = mirrorUrl;
+        usedMirror = true;
+      }
     }
   } catch {
     return {

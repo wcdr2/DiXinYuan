@@ -1,9 +1,16 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { entityTypeLabels, getArticleHref, getDictionary } from "@/lib/site";
-import type { Article, EntityType, GraphDataset, Locale } from "@/lib/types";
+import { getArticleHref, getDictionary } from "@/lib/site";
+import type {
+  Article,
+  EvidenceRef,
+  GraphDataset,
+  GraphElementClass,
+  GraphRelationType,
+  Locale,
+} from "@/lib/types";
 
 interface GraphExplorerProps {
   locale: Locale;
@@ -11,175 +18,154 @@ interface GraphExplorerProps {
   articles: Article[];
 }
 
-interface LabelLayout {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  lines: string[];
-  textX: number;
-  textStartY: number;
-  connectorX: number;
-  connectorY: number;
-}
-
-interface PositionedNode {
-  x: number;
-  y: number;
-  r: number;
-  type: EntityType;
-  label: LabelLayout;
-}
-
-const VIEWPORT = {
-  width: 1480,
-  height: 940,
-  centerX: 740,
-  centerY: 460,
+const elementOrder: GraphElementClass[] = ["subject", "goal", "content", "activity", "evaluation"];
+const palette: Record<GraphElementClass, string> = {
+  subject: "#7bd2ff",
+  goal: "#f4d67f",
+  content: "#8de1c4",
+  activity: "#89b8ff",
+  evaluation: "#c8a7ff",
 };
 
-const typeOrder: EntityType[] = [
-  "policy",
-  "enterprise",
-  "institution",
-  "university",
-  "park",
-  "project",
-  "technology",
-  "region",
-];
+const defaultTaxonomy = {
+  zh: {
+    subject: { label: "主体", description: "赋能主体" },
+    goal: { label: "目标", description: "目标价值" },
+    content: { label: "内容", description: "空间要素" },
+    activity: { label: "活动", description: "技术载体与协同活动" },
+    evaluation: { label: "评价", description: "效能评价" },
+  },
+  en: {
+    subject: { label: "Subject", description: "Actors" },
+    goal: { label: "Goal", description: "Value goals" },
+    content: { label: "Content", description: "Spatial factors" },
+    activity: { label: "Activity", description: "Carriers and actions" },
+    evaluation: { label: "Evaluation", description: "Score and effect" },
+  },
+} as const;
 
-const laneLayout: Record<EntityType, { x: number; startY: number; step: number; side: "left" | "right" | "top" }> = {
-  policy: { x: 740, startY: 132, step: 90, side: "top" },
-  enterprise: { x: 1190, startY: 170, step: 84, side: "right" },
-  institution: { x: 1030, startY: 230, step: 84, side: "right" },
-  university: { x: 1080, startY: 760, step: 84, side: "right" },
-  park: { x: 760, startY: 772, step: 84, side: "top" },
-  project: { x: 560, startY: 620, step: 88, side: "left" },
-  technology: { x: 400, startY: 260, step: 88, side: "left" },
-  region: { x: 250, startY: 170, step: 86, side: "left" },
+const relationLabels: Record<Locale, Record<GraphRelationType, string>> = {
+  zh: {
+    related: "相关",
+    guides: "引导",
+    drives: "驱动",
+    supports: "支撑",
+    located_in: "位于",
+    pursues: "面向",
+    organizes: "组织",
+    focuses_on: "聚焦",
+    enables: "赋能",
+    constrains: "约束",
+    collaborates_with: "协同",
+    assesses: "评价",
+  },
+  en: {
+    related: "Related",
+    guides: "Guides",
+    drives: "Drives",
+    supports: "Supports",
+    located_in: "Located in",
+    pursues: "Pursues",
+    organizes: "Organizes",
+    focuses_on: "Focuses on",
+    enables: "Enables",
+    constrains: "Constrains",
+    collaborates_with: "Collaborates with",
+    assesses: "Assesses",
+  },
 };
 
-const palette: Record<EntityType, { fill: string; stroke: string; halo: string }> = {
-  policy: { fill: "#d4bf7a", stroke: "#f4e1a6", halo: "rgba(212, 191, 122, 0.3)" },
-  enterprise: { fill: "#4aa9de", stroke: "#97dcff", halo: "rgba(74, 169, 222, 0.28)" },
-  institution: { fill: "#45b8d1", stroke: "#9ae9ff", halo: "rgba(69, 184, 209, 0.28)" },
-  university: { fill: "#7c92e8", stroke: "#c8d4ff", halo: "rgba(124, 146, 232, 0.3)" },
-  park: { fill: "#63cdbd", stroke: "#aff7ee", halo: "rgba(99, 205, 189, 0.3)" },
-  project: { fill: "#2dd2d9", stroke: "#9cfdff", halo: "rgba(45, 210, 217, 0.3)" },
-  technology: { fill: "#59d0a2", stroke: "#b9ffe3", halo: "rgba(89, 208, 162, 0.3)" },
-  region: { fill: "#5c83d6", stroke: "#bfd2ff", halo: "rgba(92, 131, 214, 0.3)" },
-};
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function formatLabelLines(value: string) {
-  const compact = String(value ?? "").trim();
-  if (!compact) {
+function wrapLabel(value: string, size = 8) {
+  const normalized = String(value ?? "").replace(/\s+/g, "");
+  if (!normalized) {
     return [""];
   }
-
-  if (/[\u4e00-\u9fa5]/.test(compact)) {
-    const normalized = compact.replace(/\s+/g, "");
-    if (normalized.length <= 10) {
+  if (!/[\u4e00-\u9fa5]/.test(normalized)) {
+    const words = normalized.split("-");
+    if (words.length <= 2 && normalized.length <= 18) {
       return [normalized];
     }
-
-    if (normalized.length <= 18) {
-      return [normalized.slice(0, 9), normalized.slice(9)];
-    }
-
-    return [normalized.slice(0, 9), `${normalized.slice(9, 17)}…`];
+    return [normalized.slice(0, 14), `${normalized.slice(14, 26)}${normalized.length > 26 ? "…" : ""}`];
   }
-
-  const words = compact.split(/\s+/);
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length <= 20) {
-      current = next;
-      continue;
-    }
-
-    if (current) {
-      lines.push(current);
-    }
-
-    current = word;
-    if (lines.length >= 1) {
-      break;
-    }
+  if (normalized.length <= size) {
+    return [normalized];
   }
+  return [normalized.slice(0, size), `${normalized.slice(size, size * 2)}${normalized.length > size * 2 ? "…" : ""}`];
+}
 
+function estimateLabelWidth(lines: string[]) {
+  const widest = lines.reduce((max, line) => {
+    const visualLength = line.replace(/[^\x00-\xff]/g, "aa").length;
+    return Math.max(max, visualLength);
+  }, 0);
+  return Math.max(86, Math.min(186, widest * 7.2 + 26));
+}
+
+function dedupeEvidence(refs: EvidenceRef[]) {
+  const seen = new Set();
+  return refs.filter((ref) => {
+    const key = ref.kind === "article" ? `article:${ref.articleId}` : `research:${ref.id ?? ref.title}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function getLayerLabel(locale: Locale, dataset: GraphDataset, value: GraphElementClass) {
+  const current = dataset.taxonomy?.elementClasses.find((item) => item.key === value);
   if (current) {
-    lines.push(current);
+    return {
+      label: locale === "zh" ? current.labelZh : current.labelEn,
+      description: locale === "zh" ? current.descriptionZh : current.descriptionEn,
+    };
   }
-
-  const trimmed = lines.slice(0, 2);
-  if (words.join(" ").length > trimmed.join(" ").length) {
-    trimmed[trimmed.length - 1] = `${trimmed[trimmed.length - 1].slice(0, 17)}…`;
-  }
-
-  return trimmed;
+  return defaultTaxonomy[locale][value];
 }
 
-function createLabelLayout(name: string, point: { x: number; y: number }, side: "left" | "right" | "top") {
-  const lines = formatLabelLines(name);
-  const hasCjk = /[\u4e00-\u9fa5]/.test(lines.join(""));
-  const longest = Math.max(...lines.map((line) => line.length), 4);
-  const width = clamp(longest * (hasCjk ? 13 : 8.4) + 30, 124, 230);
-  const height = 22 + lines.length * 18;
-
-  let x = side === "left" ? point.x - width - 24 : side === "right" ? point.x + 24 : point.x - width / 2;
-  let y = side === "top" ? point.y - height - 34 : point.y - height / 2;
-
-  x = clamp(x, 24, VIEWPORT.width - width - 24);
-  y = clamp(y, 20, VIEWPORT.height - height - 20);
-
-  const textX = x + 14;
-  const textStartY = y + (height - (lines.length * 16 - 2)) / 2 + 11;
-
-  return {
-    x,
-    y,
-    width,
-    height,
-    lines,
-    textX,
-    textStartY,
-    connectorX: side === "left" ? x + width : side === "right" ? x : x + width / 2,
-    connectorY: side === "top" ? y + height : y + height / 2,
+function getNetworkPositions(entities: GraphDataset["entities"], selectedId: string) {
+  const center = { x: 700, y: 420 };
+  const laneByClass: Record<
+    GraphElementClass,
+    {
+      centerX: number;
+      centerY: number;
+      columns: number;
+      dx: number;
+      dy: number;
+      labelPosition: "top" | "bottom" | "left" | "right";
+    }
+  > = {
+    subject: { centerX: 365, centerY: 230, columns: 1, dx: 0, dy: 92, labelPosition: "left" },
+    goal: { centerX: 1065, centerY: 250, columns: 1, dx: 0, dy: 116, labelPosition: "right" },
+    content: { centerX: 365, centerY: 640, columns: 1, dx: 0, dy: 92, labelPosition: "left" },
+    activity: { centerX: 700, centerY: 155, columns: 4, dx: 172, dy: 94, labelPosition: "top" },
+    evaluation: { centerX: 1065, centerY: 630, columns: 1, dx: 0, dy: 108, labelPosition: "right" },
   };
-}
+  const grouped = Object.fromEntries(
+    elementOrder.map((value) => [value, entities.filter((entity) => entity.id !== selectedId && entity.elementClass === value)]),
+  ) as Record<GraphElementClass, GraphDataset["entities"]>;
+  const positions: Record<string, { x: number; y: number; r: number; labelPosition: "top" | "bottom" | "left" | "right" }> = {
+    [selectedId]: { ...center, r: 42, labelPosition: "top" },
+  };
 
-function getPositions(entities: GraphDataset["entities"]) {
-  const positions: Record<string, PositionedNode> = {};
-
-  typeOrder.forEach((type) => {
-    const lane = laneLayout[type];
-    const list = entities
-      .filter((entity) => entity.type === type)
-      .slice()
-      .sort(
-        (left, right) =>
-          right.relatedArticleIds.length - left.relatedArticleIds.length || left.name.localeCompare(right.name, "zh-CN"),
-      );
-
-    list.forEach((entity, index) => {
-      const x = clamp(lane.x + (index % 2 === 0 ? 0 : 8), 160, VIEWPORT.width - 160);
-      const y = clamp(lane.startY + index * lane.step, 90, VIEWPORT.height - 90);
-      const r = clamp(14 + entity.relatedArticleIds.length * 1.15, 14, 24);
-
+  elementOrder.forEach((value) => {
+    const lane = laneByClass[value];
+    const current = grouped[value];
+    const columns = Math.max(1, Math.min(lane.columns, current.length));
+    const rows = Math.max(1, Math.ceil(current.length / columns));
+    const startY = lane.centerY - ((rows - 1) * lane.dy) / 2;
+    current.forEach((entity, index) => {
+      const columnIndex = index % columns;
+      const rowIndex = Math.floor(index / columns);
+      const columnOffset = (columnIndex - (columns - 1) / 2) * lane.dx;
+      const rowOffset = rowIndex * lane.dy;
       positions[entity.id] = {
-        x,
-        y,
-        r,
-        type,
-        label: createLabelLayout(entity.name, { x, y }, lane.side),
+        x: lane.centerX + columnOffset,
+        y: startY + rowOffset,
+        r: entity.id === selectedId ? 42 : Math.max(18, Math.min(26, 16 + entity.relatedArticleIds.length * 1.1)),
+        labelPosition: lane.labelPosition,
       };
     });
   });
@@ -187,308 +173,614 @@ function getPositions(entities: GraphDataset["entities"]) {
   return positions;
 }
 
+function getPreferredSelectionId(
+  entities: GraphDataset["entities"],
+  activeRegion: string,
+  activeClass: GraphElementClass | "all",
+) {
+  if (!entities.length) {
+    return "";
+  }
+  if (activeRegion === "all") {
+    return entities[0]?.id ?? "";
+  }
+
+  if (activeClass === "all") {
+    return entities.find((entity) => entity.id === activeRegion)?.id ?? entities[0]?.id ?? "";
+  }
+
+  const candidates = entities.filter((entity) => entity.elementClass === activeClass);
+  if (!candidates.length) {
+    return entities[0]?.id ?? "";
+  }
+
+  const ranked = [...candidates].sort((left, right) => {
+    const score = (entity: GraphDataset["entities"][number]) => {
+      if (entity.id === activeRegion) {
+        return 500;
+      }
+
+      let value = 0;
+      if (entity.parentId === activeRegion) {
+        value += 240;
+      }
+      if (entity.regionIds?.includes(activeRegion)) {
+        value += 120;
+      }
+      if ((entity.regionIds?.length ?? 0) <= 2) {
+        value += 36;
+      }
+      if (entity.spatialScope === "project" || entity.spatialScope === "park") {
+        value += 24;
+      }
+      if (entity.spatialScope === "province") {
+        value -= 40;
+      }
+      return value;
+    };
+
+    const diff = score(right) - score(left);
+    if (diff !== 0) {
+      return diff;
+    }
+    return (left.displayOrder ?? 9999) - (right.displayOrder ?? 9999) || left.name.localeCompare(right.name, "zh-CN");
+  });
+
+  return ranked[0]?.id ?? entities[0]?.id ?? "";
+}
+
 export function GraphExplorer({ locale, dataset, articles }: GraphExplorerProps) {
   const dict = getDictionary(locale);
-  const [activeType, setActiveType] = useState<EntityType | "all">("all");
-  const [selectedId, setSelectedId] = useState(
-    dataset.entities.find((entity) => entity.id === "gis-platform")?.id ?? dataset.entities[0]?.id ?? "",
-  );
+  const articleLookup = useMemo(() => new Map(articles.map((article) => [article.id, article])), [articles]);
+  const regionOptions = dataset.regionScopes ?? [];
+  const [viewMode, setViewMode] = useState<"layered" | "network">("layered");
+  const [activeClass, setActiveClass] = useState<GraphElementClass | "all">("all");
+  const [activeRegion, setActiveRegion] = useState<string>("all");
   const [showAllEdges, setShowAllEdges] = useState(false);
+  const [selectedId, setSelectedId] = useState(dataset.views?.network?.featuredEntityId ?? dataset.entities[0]?.id ?? "");
 
-  const filteredEntities = useMemo(
-    () => dataset.entities.filter((entity) => activeType === "all" || entity.type === activeType),
-    [activeType, dataset.entities],
-  );
+  const regionScopedEntities = useMemo(() => {
+    const scoped = dataset.entities.filter((entity) => {
+      if (activeRegion === "all") {
+        return true;
+      }
+      return entity.id === activeRegion || entity.regionIds?.includes(activeRegion) || entity.parentId === activeRegion;
+    });
+
+    if (activeRegion === "all" || activeRegion === "guangxi") {
+      return scoped;
+    }
+
+    return scoped.filter((entity) => {
+      const isOtherRegionNode =
+        entity.elementClass === "content" &&
+        entity.type === "region" &&
+        entity.id !== activeRegion;
+      return !isOtherRegionNode;
+    });
+  }, [activeRegion, dataset.entities]);
+
+  const filteredEntities = useMemo(() => {
+    if (activeClass === "all") {
+      return regionScopedEntities;
+    }
+    return regionScopedEntities.filter((entity) => entity.elementClass === activeClass);
+  }, [activeClass, regionScopedEntities]);
+
+  useEffect(() => {
+    const preferredId = getPreferredSelectionId(filteredEntities, activeRegion, activeClass);
+    if (preferredId && preferredId !== selectedId) {
+      setSelectedId(preferredId);
+    }
+  }, [activeClass, activeRegion, filteredEntities]);
 
   useEffect(() => {
     if (!filteredEntities.some((entity) => entity.id === selectedId)) {
-      setSelectedId(filteredEntities[0]?.id ?? "");
+      setSelectedId(getPreferredSelectionId(filteredEntities, activeRegion, activeClass));
     }
-  }, [filteredEntities, selectedId]);
+  }, [activeClass, activeRegion, filteredEntities, selectedId]);
 
-  const selectedEntity =
-    filteredEntities.find((entity) => entity.id === selectedId) ?? filteredEntities[0] ?? null;
+  useEffect(() => {
+    setShowAllEdges(false);
+  }, [activeRegion, activeClass]);
 
-  const positions = useMemo(() => getPositions(filteredEntities), [filteredEntities]);
-  const visibleIds = new Set(filteredEntities.map((entity) => entity.id));
-  const visibleEdges = dataset.edges.filter(
-    (edge) => visibleIds.has(edge.sourceEntityId) && visibleIds.has(edge.targetEntityId),
+  const entityMap = useMemo(
+    () => new Map(dataset.entities.map((entity) => [entity.id, entity])),
+    [dataset.entities],
   );
-
-  const relationEdges = selectedEntity
-    ? visibleEdges.filter(
-        (edge) => edge.sourceEntityId === selectedEntity.id || edge.targetEntityId === selectedEntity.id,
-      )
-    : [];
-
-  const displayedEdges = showAllEdges || !selectedEntity ? visibleEdges : relationEdges;
-  const relationNodeIds = new Set<string>();
-  relationEdges.forEach((edge) => {
-    relationNodeIds.add(edge.sourceEntityId);
-    relationNodeIds.add(edge.targetEntityId);
+  const regionVisibleIds = new Set(regionScopedEntities.map((entity) => entity.id));
+  const eligibleEdges = dataset.edges.filter((edge) => {
+    const modeHit = !edge.viewModes || edge.viewModes.includes(viewMode);
+    return modeHit && regionVisibleIds.has(edge.sourceEntityId) && regionVisibleIds.has(edge.targetEntityId);
   });
+  const selectedEdges = eligibleEdges.filter(
+    (edge) => edge.sourceEntityId === selectedId || edge.targetEntityId === selectedId,
+  );
+  const networkCenterId = activeRegion !== "all" ? activeRegion : selectedId;
+  const networkCenterEntity = entityMap.get(networkCenterId) ?? null;
 
-  const evidenceArticles = selectedEntity
-    ? articles.filter((article) => selectedEntity.relatedArticleIds.includes(article.id)).slice(0, 6)
-    : [];
-
-  const relationLabels: Record<string, string> = {
-    related: locale === "zh" ? "协同连接" : "Related",
-    guides: locale === "zh" ? "政策引导" : "Guides",
-    drives: locale === "zh" ? "产业驱动" : "Drives",
-    supports: locale === "zh" ? "技术支撑" : "Supports",
-    located_in: locale === "zh" ? "空间落位" : "Located in",
+  const rankEntityForRegion = (entity: GraphDataset["entities"][number]) => {
+    let score = entity.relatedArticleIds.length + (entity.displayOrder != null ? Math.max(0, 20 - entity.displayOrder) : 0);
+    if (activeRegion !== "all") {
+      if (entity.parentId === activeRegion) {
+        score += 240;
+      }
+      if (entity.regionIds?.includes(activeRegion)) {
+        score += 120;
+      }
+      if ((entity.regionIds?.length ?? 0) <= 2) {
+        score += 40;
+      }
+      if (entity.spatialScope === "project" || entity.spatialScope === "park") {
+        score += 30;
+      }
+      if (entity.spatialScope === "province") {
+        score -= 50;
+      }
+    }
+    return score;
   };
 
-  const legendTypes = typeOrder.filter((type) => filteredEntities.some((entity) => entity.type === type));
-  const detailLabels =
-    locale === "zh"
-      ? {
-          hint: "默认只显示当前节点关系；可切换为显示全部关系。",
-          overview: "实体概览",
-          relations: "关联关系",
-          evidence: "证据文章",
-          articles: "关联文章",
-          edges: "直接关系",
-          focus: "仅看当前关联",
-          allEdges: "显示全部关系",
-        }
-      : {
-          hint: "By default only relations of the selected node are rendered. You can switch to all edges.",
-          overview: "Entity overview",
-          relations: "Relations",
-          evidence: "Evidence",
-          articles: "Linked articles",
-          edges: "Direct relations",
-          focus: "Focus selected",
-          allEdges: "Show all edges",
-        };
+  const baseNetworkPool = useMemo(() => {
+    const pool = regionScopedEntities.filter((entity) => entity.id !== networkCenterId);
+    if (activeClass === "all") {
+      return pool;
+    }
+    return pool.filter((entity) => entity.elementClass === activeClass);
+  }, [activeClass, networkCenterId, regionScopedEntities]);
+
+  const focusLimits: Record<GraphElementClass, number> = {
+    subject: 2,
+    goal: 2,
+    content: 4,
+    activity: 4,
+    evaluation: 2,
+  };
+  const expandedLimits: Record<GraphElementClass, number> = {
+    subject: 6,
+    goal: 4,
+    content: 8,
+    activity: 8,
+    evaluation: 4,
+  };
+
+  const networkEntities = useMemo(() => {
+    const addByLimit = (pool: GraphDataset["entities"], limit: number) =>
+      [...pool]
+        .sort((left, right) => rankEntityForRegion(right) - rankEntityForRegion(left) || left.name.localeCompare(right.name, "zh-CN"))
+        .slice(0, limit);
+
+    const selected: GraphDataset["entities"] = [];
+    if (networkCenterEntity) {
+      selected.push(networkCenterEntity);
+    }
+
+    if (activeClass === "all") {
+      elementOrder.forEach((elementClass) => {
+        const limit = showAllEdges ? expandedLimits[elementClass] : focusLimits[elementClass];
+        const pool = baseNetworkPool.filter((entity) => entity.elementClass === elementClass);
+        selected.push(...addByLimit(pool, limit));
+      });
+    } else {
+      const limit = showAllEdges ? expandedLimits[activeClass] : focusLimits[activeClass];
+      selected.push(...addByLimit(baseNetworkPool, limit));
+    }
+
+    const seen = new Set<string>();
+    return selected.filter((entity) => {
+      if (seen.has(entity.id)) {
+        return false;
+      }
+      seen.add(entity.id);
+      return true;
+    });
+  }, [activeClass, baseNetworkPool, networkCenterEntity, showAllEdges]);
+
+  const activeNodeIds = new Set(networkEntities.map((entity) => entity.id));
+  const displayedEdges = useMemo(() => {
+    if (!networkCenterEntity) {
+      return [];
+    }
+
+    const starEdges = networkEntities
+      .filter((entity) => entity.id !== networkCenterId)
+      .map((entity) => ({
+        sourceEntityId: networkCenterId,
+        targetEntityId: entity.id,
+        relationType: "related" as GraphRelationType,
+      }));
+
+    if (!showAllEdges) {
+      return starEdges;
+    }
+
+    const extraEdges = eligibleEdges.filter((edge) => {
+      const visible = activeNodeIds.has(edge.sourceEntityId) && activeNodeIds.has(edge.targetEntityId);
+      if (!visible) {
+        return false;
+      }
+      if (edge.sourceEntityId === networkCenterId || edge.targetEntityId === networkCenterId) {
+        return false;
+      }
+      return true;
+    });
+
+    return [
+      ...starEdges,
+      ...extraEdges,
+    ];
+  }, [activeNodeIds, eligibleEdges, networkCenterEntity, networkCenterId, networkEntities, showAllEdges]);
+
+  const canExpandNetwork = useMemo(() => {
+    const fullCount = activeClass === "all"
+      ? baseNetworkPool.length + (networkCenterEntity ? 1 : 0)
+      : baseNetworkPool.length + (networkCenterEntity ? 1 : 0);
+    return fullCount > networkEntities.length;
+  }, [activeClass, baseNetworkPool.length, networkCenterEntity, networkEntities.length]);
+  const highlightedIds = new Set<string>([selectedId]);
+  displayedEdges.forEach((edge) => {
+    highlightedIds.add(edge.sourceEntityId);
+    highlightedIds.add(edge.targetEntityId);
+  });
+
+  const selectedEntity = entityMap.get(selectedId) ?? null;
+  const networkPositions = useMemo(
+    () => getNetworkPositions(networkEntities, networkCenterId),
+    [networkCenterId, networkEntities],
+  );
+
+  const groupedColumns = elementOrder.map((value) => ({
+    value,
+    meta: getLayerLabel(locale, dataset, value),
+    entities: filteredEntities
+      .filter((entity) => entity.elementClass === value)
+      .sort(
+        (left, right) =>
+          (left.displayOrder ?? 9999) - (right.displayOrder ?? 9999) ||
+          right.relatedArticleIds.length - left.relatedArticleIds.length ||
+          left.name.localeCompare(right.name, "zh-CN"),
+      ),
+  }));
+
+  const evidenceRefs = useMemo(() => {
+    if (!selectedEntity) {
+      return [];
+    }
+    const articleRefs = selectedEntity.relatedArticleIds
+      .map((articleId) => articles.find((article) => article.id === articleId))
+      .filter((article): article is Article => Boolean(article))
+      .map((article) => ({
+        kind: "article" as const,
+        articleId: article.id,
+        title: article.title,
+        sourceLabel: article.sourceName,
+        url: article.originalUrl,
+        publishedAt: article.publishedAt,
+      }));
+    return dedupeEvidence([
+      ...selectedEdges.flatMap((edge) => edge.evidenceRefs ?? []),
+      ...articleRefs,
+    ]).slice(0, 10);
+  }, [articles, selectedEdges, selectedEntity]);
+
+  const groupedRelations = useMemo(() => {
+    if (!selectedEntity) {
+      return [];
+    }
+    return elementOrder
+      .map((value) => {
+        const items = selectedEdges
+          .map((edge) => {
+            const targetId = edge.sourceEntityId === selectedEntity.id ? edge.targetEntityId : edge.sourceEntityId;
+            const target = entityMap.get(targetId);
+            if (!target) {
+              return null;
+            }
+            return {
+              target,
+              label: relationLabels[locale][edge.relationType],
+              edge,
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => Boolean(item))
+          .filter((item) => item.target.elementClass === value);
+        return { value, label: getLayerLabel(locale, dataset, value).label, items };
+      })
+      .filter((group) => group.items.length > 0);
+  }, [dataset, entityMap, locale, selectedEdges, selectedEntity]);
+
+  const labels = locale === "zh"
+    ? {
+        nodeCount: "个节点",
+        edgeCount: "条关系",
+        linkedArticles: "相关文章",
+        directRelations: "直接关系",
+        allEvidence: "证据与依据",
+        emptyColumn: "当前筛选下暂无节点",
+        scoreLabels: {
+          factorSupport: "要素保障",
+          carrierCapacity: "技术承载",
+          collaborationLevel: "协同水平",
+          applicationOutput: "应用成效",
+          comprehensiveBenefit: "综合效益",
+        },
+      }
+    : {
+        nodeCount: "nodes",
+        edgeCount: "relations",
+        linkedArticles: "linked articles",
+        directRelations: "direct relations",
+        allEvidence: "Evidence and notes",
+        emptyColumn: "No nodes in this column",
+        scoreLabels: {
+          factorSupport: "Factor support",
+          carrierCapacity: "Carrier capacity",
+          collaborationLevel: "Collaboration",
+          applicationOutput: "Application output",
+          comprehensiveBenefit: "Benefit",
+        },
+      };
 
   return (
-    <div className="graph-layout graph-layout--stacked">
-      <section className="graph-stage card-panel graph-stage--enhanced graph-stage--stacked">
-        <div className="graph-toolbar">
+    <div className="kg-page">
+      <section className="card-panel kg-toolbar">
+        <div className="kg-toolbar__row">
           <div className="filter-row">
-            {(["all", ...typeOrder] as Array<EntityType | "all">).map((option) => (
+            <button type="button" onClick={() => setActiveClass("all")} className={activeClass === "all" ? "filter-chip is-active" : "filter-chip"}>
+              {dict.graph.filterAll}
+            </button>
+            {elementOrder.map((value) => (
               <button
-                key={option}
+                key={value}
                 type="button"
-                onClick={() => setActiveType(option)}
-                className={option === activeType ? "filter-chip is-active" : "filter-chip"}
+                onClick={() => setActiveClass(value)}
+                className={activeClass === value ? "filter-chip is-active" : "filter-chip"}
               >
-                {option === "all" ? dict.graph.filterAll : entityTypeLabels[locale][option]}
+                {getLayerLabel(locale, dataset, value).label}
               </button>
             ))}
           </div>
-          <div className="graph-toolbar__controls">
+          <div className="kg-toolbar__modes">
+            <button type="button" onClick={() => setViewMode("layered")} className={viewMode === "layered" ? "filter-chip is-active" : "filter-chip"}>
+              {dict.graph.viewLayered}
+            </button>
+            <button type="button" onClick={() => setViewMode("network")} className={viewMode === "network" ? "filter-chip is-active" : "filter-chip"}>
+              {dict.graph.viewNetwork}
+            </button>
             <button
               type="button"
-              onClick={() => setShowAllEdges((previous) => !previous)}
+              onClick={() => setShowAllEdges((value) => !value)}
               className={showAllEdges ? "filter-chip is-active" : "filter-chip"}
+              disabled={!showAllEdges && !canExpandNetwork}
             >
-              {showAllEdges ? detailLabels.allEdges : detailLabels.focus}
+              {showAllEdges ? dict.graph.focusSelected : dict.graph.showAllEdges}
             </button>
-          </div>
-          <div className="graph-stats">
-            <span>{filteredEntities.length}</span>
-            <small>{locale === "zh" ? "个节点" : "nodes"}</small>
-            <span>{displayedEdges.length}</span>
-            <small>{locale === "zh" ? "条关系" : "edges"}</small>
           </div>
         </div>
 
-        <p className="graph-hint">{detailLabels.hint}</p>
+        <div className="kg-toolbar__row kg-toolbar__row--compact">
+          <div className="kg-region-filter">
+            <label htmlFor="graph-region">{dict.graph.filterRegionAll}</label>
+            <select id="graph-region" value={activeRegion} onChange={(event) => setActiveRegion(event.target.value)} className="kg-select">
+              <option value="all">{dict.graph.filterRegionAll}</option>
+              {regionOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {locale === "zh" ? option.labelZh : option.labelEn}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="graph-stats">
+            <span>{viewMode === "network" ? networkEntities.length : filteredEntities.length}</span>
+            <small>{labels.nodeCount}</small>
+            <span>{displayedEdges.length}</span>
+            <small>{labels.edgeCount}</small>
+          </div>
+        </div>
+      </section>
 
-        <div className="graph-canvas-frame">
-          <svg
-            viewBox={`0 0 ${VIEWPORT.width} ${VIEWPORT.height}`}
-            className="graph-canvas graph-canvas--enhanced graph-canvas--wide"
-            role="img"
-            aria-label={dict.pageIntro.graphTitle}
-          >
+      {viewMode === "layered" ? (
+        <section className="card-panel kg-layered-board">
+          <div className="kg-layered-grid">
+            {groupedColumns.map((column, columnIndex) => (
+              <div key={column.value} className="kg-column">
+                <div className="kg-column__head">
+                  <span className="kg-column__index">0{columnIndex + 1}</span>
+                  <div>
+                    <strong>{column.meta.label}</strong>
+                    <small>{column.meta.description}</small>
+                  </div>
+                </div>
+                <div className="kg-column__list">
+                  {column.entities.length > 0 ? (
+                    column.entities.map((entity) => {
+                      const isActive = entity.id === selectedId;
+                      const isLinked = !isActive && highlightedIds.has(entity.id);
+                      return (
+                        <button
+                          key={entity.id}
+                          type="button"
+                          onClick={() => setSelectedId(entity.id)}
+                          className={isActive ? "kg-card is-active" : isLinked ? "kg-card is-linked" : "kg-card"}
+                        >
+                          <span className="kg-card__meta">{entity.subtype ?? column.meta.label}</span>
+                          <strong>{entity.name}</strong>
+                          <small>{entity.relatedArticleIds.length} {labels.linkedArticles}</small>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="kg-column__empty">{labels.emptyColumn}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="card-panel kg-network">
+          <svg viewBox="0 0 1400 860" className="kg-network__svg" role="img" aria-label={dict.pageIntro.graphTitle}>
             <defs>
-              <radialGradient id="graphCenterGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="rgba(93, 229, 249, 0.34)" />
-                <stop offset="100%" stopColor="rgba(93, 229, 249, 0)" />
+              <radialGradient id="kgCenterGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgba(120, 235, 255, 0.45)" />
+                <stop offset="100%" stopColor="rgba(120, 235, 255, 0)" />
               </radialGradient>
-              <filter
-                id="graphGlow"
-                x="0"
-                y="0"
-                width={VIEWPORT.width}
-                height={VIEWPORT.height}
-                filterUnits="userSpaceOnUse"
-                colorInterpolationFilters="sRGB"
-              >
-                <feGaussianBlur stdDeviation="4" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
             </defs>
-
-            <g className="graph-rings" aria-hidden="true">
-              <circle cx={VIEWPORT.centerX} cy={VIEWPORT.centerY} r="118" />
-              <circle cx={VIEWPORT.centerX} cy={VIEWPORT.centerY} r="238" />
-              <circle cx={VIEWPORT.centerX} cy={VIEWPORT.centerY} r="352" />
-              <circle cx={VIEWPORT.centerX} cy={VIEWPORT.centerY} r="8" fill="url(#graphCenterGlow)" />
-            </g>
-
+            <circle cx="700" cy="420" r="82" fill="url(#kgCenterGlow)" />
             {displayedEdges.map((edge) => {
-              const source = positions[edge.sourceEntityId];
-              const target = positions[edge.targetEntityId];
+              const source = networkPositions[edge.sourceEntityId];
+              const target = networkPositions[edge.targetEntityId];
               if (!source || !target) {
                 return null;
               }
-
-              const isActive =
-                edge.sourceEntityId === selectedEntity?.id || edge.targetEntityId === selectedEntity?.id;
-              const ctrlX = (source.x + target.x) / 2;
-              const bend = Math.abs(source.x - target.x) > 320 ? 64 : 34;
-              const c1y = source.y + (source.y < target.y ? bend : -bend);
-              const c2y = target.y + (source.y < target.y ? -bend : bend);
-
+              const isCenterEdge = edge.sourceEntityId === networkCenterId || edge.targetEntityId === networkCenterId;
+              const isSelectedEdge = edge.sourceEntityId === selectedId || edge.targetEntityId === selectedId;
               return (
                 <path
-                  key={`${edge.sourceEntityId}-${edge.targetEntityId}`}
-                  d={`M ${source.x} ${source.y} C ${ctrlX} ${c1y} ${ctrlX} ${c2y} ${target.x} ${target.y}`}
-                  className={
-                    showAllEdges && selectedEntity && !isActive ? "graph-edge is-muted" : isActive ? "graph-edge is-active" : "graph-edge"
-                  }
-                  filter={isActive ? "url(#graphGlow)" : undefined}
+                  key={`${edge.sourceEntityId}-${edge.targetEntityId}-${edge.relationType}`}
+                  d={`M ${source.x} ${source.y} Q ${(source.x + target.x) / 2} ${(source.y + target.y) / 2 - 18} ${target.x} ${target.y}`}
+                  className={isCenterEdge ? "kg-network__edge is-center" : isSelectedEdge ? "kg-network__edge is-active" : "kg-network__edge"}
                 />
               );
             })}
-
-            {filteredEntities.map((entity) => {
-              const point = positions[entity.id];
+            {networkEntities.map((entity) => {
+              const point = networkPositions[entity.id];
               if (!point) {
                 return null;
               }
+              const lines = wrapLabel(entity.name, 7);
+              const isCenter = entity.id === networkCenterId;
+              const isActive = entity.id === selectedId;
+              const labelWidth = estimateLabelWidth(lines);
+              const labelHeight = 18 + Math.max(lines.length - 1, 0) * 16;
+              const boxHeight = labelHeight + 12;
+              const gap = 18;
+              let labelCenterX = point.x;
+              let labelCenterY = point.y;
 
-              const active = entity.id === selectedEntity?.id;
-              const typePalette = palette[entity.type];
-              const dimmed = selectedEntity && !showAllEdges && !relationNodeIds.has(entity.id);
+              if (point.labelPosition === "left") {
+                labelCenterX = point.x - point.r - gap - labelWidth / 2;
+              } else if (point.labelPosition === "right") {
+                labelCenterX = point.x + point.r + gap + labelWidth / 2;
+              } else if (point.labelPosition === "top") {
+                labelCenterY = point.y - point.r - gap - boxHeight / 2;
+              } else {
+                labelCenterY = point.y + point.r + gap + boxHeight / 2;
+              }
 
+              const labelRectX = labelCenterX - labelWidth / 2;
+              const labelRectY = labelCenterY - boxHeight / 2;
+              const labelY = labelRectY + Math.max(24, (boxHeight - (lines.length - 1) * 16) / 2);
               return (
-                <g
-                  key={entity.id}
-                  onClick={() => setSelectedId(entity.id)}
-                  className={dimmed ? "graph-node-group is-dimmed" : "graph-node-group"}
-                  role="button"
-                  aria-label={entity.name}
-                >
-                  <title>{entity.name}</title>
-                  <line
-                    x1={point.x}
-                    y1={point.y}
-                    x2={point.label.connectorX}
-                    y2={point.label.connectorY}
-                    className={active ? "graph-label-guide is-active" : "graph-label-guide"}
-                  />
+                <g key={entity.id} className="kg-network__node" onClick={() => setSelectedId(entity.id)}>
+                  <circle cx={point.x} cy={point.y} r={point.r + 8} fill={`${palette[entity.elementClass ?? "content"]}22`} />
+                  <circle cx={point.x} cy={point.y} r={point.r} fill={palette[entity.elementClass ?? "content"]} className={isActive || isCenter ? "is-active" : ""} />
                   <rect
-                    x={point.label.x}
-                    y={point.label.y}
-                    width={point.label.width}
-                    height={point.label.height}
-                    rx="14"
-                    className={active ? "graph-label-card is-active" : "graph-label-card"}
+                    x={labelRectX}
+                    y={labelRectY}
+                    width={labelWidth}
+                    height={boxHeight}
+                    rx={18}
+                    className={isActive || isCenter ? "kg-network__label-box is-active" : "kg-network__label-box"}
                   />
-                  <text x={point.label.textX} y={point.label.textStartY} textAnchor="start" className="graph-label-text">
-                    {point.label.lines.map((line, lineIndex) => (
-                      <tspan key={`${entity.id}-${lineIndex}`} x={point.label.textX} dy={lineIndex === 0 ? 0 : 16}>
+                  <text x={labelCenterX} y={labelY} textAnchor="middle" className="kg-network__label">
+                    {lines.map((line, index) => (
+                      <tspan key={`${entity.id}-${index}`} x={labelCenterX} dy={index === 0 ? 0 : 16}>
                         {line}
                       </tspan>
                     ))}
                   </text>
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={point.r + (active ? 13 : 9)}
-                    fill={typePalette.halo}
-                    className={active ? "graph-node-halo is-active" : "graph-node-halo"}
-                  />
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={point.r}
-                    fill={typePalette.fill}
-                    stroke={typePalette.stroke}
-                    className={active ? "graph-node is-active" : "graph-node"}
-                    filter="url(#graphGlow)"
-                  />
-                  <circle cx={point.x} cy={point.y} r={Math.max(point.r - 7, 7)} className="graph-node-core" />
                 </g>
               );
             })}
           </svg>
-        </div>
-
-        <div className="graph-legend">
-          {legendTypes.map((type) => (
-            <span key={type} className={`graph-legend__item graph-legend__item--${type}`}>
-              <i style={{ backgroundColor: palette[type].fill }} aria-hidden="true" />
-              {entityTypeLabels[locale][type]}
-            </span>
-          ))}
-        </div>
-      </section>
+        </section>
+      )}
 
       {selectedEntity ? (
         <div className="graph-detail-stack">
           <section className="card-panel graph-focus-card">
             <div className="graph-focus-card__head">
-              <span className={`entity-badge entity-badge--${selectedEntity.type}`}>
-                {entityTypeLabels[locale][selectedEntity.type]}
-              </span>
+              <span className="entity-badge">{getLayerLabel(locale, dataset, selectedEntity.elementClass ?? "content").label}</span>
               <h3>{selectedEntity.name}</h3>
             </div>
             <p className="graph-focus-card__intro">{selectedEntity.intro}</p>
+            {selectedEntity.tags?.length ? (
+              <div className="tag-row">
+                {selectedEntity.tags.map((tag) => (
+                  <span key={tag} className="source-chip">{tag}</span>
+                ))}
+              </div>
+            ) : null}
             <div className="entity-metrics entity-metrics--light">
               <div className="entity-metrics__item entity-metrics__item--light">
                 <strong>{selectedEntity.relatedArticleIds.length}</strong>
-                <span>{detailLabels.articles}</span>
+                <span>{labels.linkedArticles}</span>
               </div>
               <div className="entity-metrics__item entity-metrics__item--light">
-                <strong>{relationEdges.length}</strong>
-                <span>{detailLabels.edges}</span>
+                <strong>{selectedEdges.length}</strong>
+                <span>{labels.directRelations}</span>
+              </div>
+              <div className="entity-metrics__item entity-metrics__item--light">
+                <strong>{evidenceRefs.length}</strong>
+                <span>{labels.allEvidence}</span>
               </div>
             </div>
           </section>
 
           <div className="graph-detail-grid">
             <section className="card-panel graph-detail-card graph-detail-card--light">
-              <p className="section-kicker">{detailLabels.overview}</p>
-              <h4>{detailLabels.relations}</h4>
-              <div className="relation-list relation-list--light">
-                {relationEdges.map((edge) => {
-                  const targetId = edge.sourceEntityId === selectedEntity.id ? edge.targetEntityId : edge.sourceEntityId;
-                  const targetEntity = dataset.entities.find((entity) => entity.id === targetId);
-                  if (!targetEntity) {
-                    return null;
-                  }
-
-                  return (
-                    <div key={`${edge.sourceEntityId}-${edge.targetEntityId}`} className="relation-item relation-item--light">
-                      <strong>{targetEntity.name}</strong>
-                      <span>{relationLabels[edge.relationType]}</span>
+              <p className="section-kicker">{dict.graph.detailTitle}</p>
+              <h4>{dict.graph.relations}</h4>
+              <div className="kg-relation-groups">
+                {groupedRelations.map((group) => (
+                  <div key={group.value} className="kg-relation-group">
+                    <strong>{group.label}</strong>
+                    <div className="relation-list relation-list--light">
+                      {group.items.map((item) => (
+                        <div key={`${item.edge.sourceEntityId}-${item.edge.targetEntityId}`} className="relation-item relation-item--light">
+                          <strong>{item.target.name}</strong>
+                          <span>{item.label}</span>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </section>
 
             <section className="card-panel graph-detail-card graph-detail-card--light">
-              <p className="section-kicker">{detailLabels.evidence}</p>
-              <h4>{dict.graph.evidence}</h4>
+              <p className="section-kicker">{dict.graph.scorecard}</p>
+              <h4>{dict.graph.evidenceMixed}</h4>
+              {selectedEntity.scorecard ? (
+                <div className="kg-scorecard">
+                  {Object.entries(selectedEntity.scorecard).map(([key, value]) => (
+                    <div key={key} className="kg-scorecard__row">
+                      <span>{labels.scoreLabels[key as keyof typeof labels.scoreLabels]}</span>
+                      <div className="kg-scorecard__bar"><i style={{ width: `${(Number(value) / 5) * 100}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <div className="evidence-list evidence-list--light">
-                {evidenceArticles.map((article) => (
-                  <Link key={article.id} href={getArticleHref(locale, article)} className="evidence-link evidence-link--light">
-                    <span>{article.title}</span>
-                    <small>{article.sourceName}</small>
-                  </Link>
-                ))}
+                {evidenceRefs.map((ref, index) =>
+                  ref.kind === "article" && ref.articleId && articleLookup.get(ref.articleId) ? (
+                    <Link key={`${ref.kind}-${ref.articleId}-${index}`} href={getArticleHref(locale, articleLookup.get(ref.articleId)!)} className="evidence-link evidence-link--light">
+                      <span>{ref.title}</span>
+                      <small>{ref.sourceLabel}</small>
+                    </Link>
+                  ) : ref.url ? (
+                    <a key={`${ref.kind}-${ref.title}-${index}`} href={ref.url} target="_blank" rel="noreferrer" className="evidence-link evidence-link--light">
+                      <span>{ref.title}</span>
+                      <small>{ref.sourceLabel}</small>
+                    </a>
+                  ) : (
+                    <div key={`${ref.kind}-${ref.title}-${index}`} className="evidence-link evidence-link--light">
+                      <span>{ref.title}</span>
+                      <small>{ref.sourceLabel}</small>
+                    </div>
+                  ),
+                )}
               </div>
             </section>
           </div>

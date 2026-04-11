@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(magick \"C:/Users/苏文涛/Desktop/2026410103635.bmp\" \"C:/Users/苏文涛/Desktop/2026410103635.png\")",
+      "Bash(ffmpeg -i \"C:/Users/苏文涛/Desktop/2026410103635.bmp\" \"C:/Users/苏文涛/Desktop/2026410103635.png\")",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; [System.Drawing.Image]::FromFile\\('C:\\\\Users\\\\苏文涛\\\\Desktop\\\\2026410103635.bmp'\\).Save\\('C:\\\\Users\\\\苏文涛\\\\Desktop\\\\2026410103635.png', [System.Drawing.Imaging.ImageFormat]::Png\\)\")",
+      "Bash(echo \"Exit: $?\")"
+    ]
+  }
+}
