@@ -76,6 +76,7 @@ export const dictionaries = {
       home: "首页",
       news: "新闻",
       wordCloud: "词云",
+      map: "地图",
       graph: "知识图谱",
       sources: "来源说明",
       about: "项目介绍",
@@ -118,6 +119,8 @@ export const dictionaries = {
       newsSummary: "浏览来自白名单来源的新闻摘要，可按栏目、来源、时间和广西相关性筛选。",
       cloudTitle: "产业词云",
       cloudSummary: "基于最近 30 天已发布新闻提取关键词，支持按栏目查看并跳转至对应结果。",
+      mapTitle: "广西地球信息产业专题地图",
+      mapSummary: "以广西 14 个设区市和北部湾专题区域为入口，联动新闻热度、关键词和图谱主体，形成城市级研究视图。",
       graphTitle: "地球空间信息赋能知识图谱",
       graphSummary:
         "围绕主体、目标、内容、活动、评价五类要素构建广西地球空间信息赋能知识图谱，并用新闻证据与调研依据共同支撑结构化展示。",
@@ -131,6 +134,7 @@ export const dictionaries = {
       queryPlaceholder: "搜索标题、摘要、来源或关键词",
       category: "栏目",
       source: "来源",
+      region: "区域",
       guangxi: "广西相关",
       sort: "排序",
       all: "全部",
@@ -148,6 +152,7 @@ export const dictionaries = {
       allSources: "查看来源说明",
       allGraph: "进入知识图谱",
       allCloud: "进入词云页面",
+      allMap: "进入专题地图",
     },
     wordCloud: {
       all: "综合热词",
@@ -206,6 +211,7 @@ export const dictionaries = {
       home: "Home",
       news: "News",
       wordCloud: "Word Cloud",
+      map: "Map",
       graph: "Knowledge Graph",
       sources: "Sources",
       about: "About",
@@ -248,6 +254,9 @@ export const dictionaries = {
       newsSummary: "Browse structured article summaries from trusted sources with filtering by category, source, time and Guangxi relevance.",
       cloudTitle: "Industry Word Cloud",
       cloudSummary: "Keywords are generated from the latest 30-day article set and can route into filtered news results.",
+      mapTitle: "Guangxi Thematic Geo-Industry Map",
+      mapSummary:
+        "The map organizes Guangxi's 14 prefecture-level cities and the Beibu Gulf topic into a city-level analytical view connected to news, keywords and graph entities.",
       graphTitle: "Geospatial Enablement Knowledge Graph",
       graphSummary:
         "The graph organizes Guangxi geospatial enablement through five layers: subject, goal, content, activity and evaluation, backed by news evidence and research notes.",
@@ -261,6 +270,7 @@ export const dictionaries = {
       queryPlaceholder: "Search title, summary, source or keywords",
       category: "Category",
       source: "Source",
+      region: "Region",
       guangxi: "Guangxi",
       sort: "Sort",
       all: "All",
@@ -278,6 +288,7 @@ export const dictionaries = {
       allSources: "View source notes",
       allGraph: "Open graph",
       allCloud: "Open word cloud",
+      allMap: "Open thematic map",
     },
     wordCloud: {
       all: "Combined terms",

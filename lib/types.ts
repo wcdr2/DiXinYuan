@@ -195,3 +195,73 @@ export interface SummaryMetrics {
   totalEdges: number;
 }
 
+export type MapMode = "all" | ArticleCategory;
+
+export interface MapCategoryCounts {
+  enterprise: number;
+  technology: number;
+  policy: number;
+}
+
+export interface MapLegendRange {
+  min: number;
+  max: number;
+  labelZh: string;
+  labelEn: string;
+  color: string;
+}
+
+export interface MapLegend {
+  mode: MapMode;
+  ranges: MapLegendRange[];
+}
+
+export interface MapGeometryAsset {
+  id: string;
+  path: string;
+  labelX: number;
+  labelY: number;
+  labelAlign?: "start" | "middle" | "end";
+}
+
+export interface MapRegion {
+  id: string;
+  name: string;
+  nameEn: string;
+  type: "city" | "special-region";
+  geometryKey: string;
+  center: [number, number];
+  zoom?: number;
+  bdDistrictName?: string;
+  summary: string;
+  summaryEn: string;
+  articleCount: number;
+  articleIds: string[];
+  categoryCounts: MapCategoryCounts;
+  keywordHighlights: string[];
+  entityIds: string[];
+  latestArticleIds: string[];
+  subjectEntityCount: number;
+  isPriorityRegion: boolean;
+  graphRegionId?: string;
+  memberRegionIds?: string[];
+}
+
+export interface MapDatasetMetrics {
+  regionCount: number;
+  cityCount: number;
+  specialRegionCount: number;
+  priorityRegionCount: number;
+  totalArticles: number;
+  totalGraphEntities: number;
+}
+
+export interface MapDataset {
+  updatedAt: string;
+  viewBox: string;
+  geometryAssets: MapGeometryAsset[];
+  regions: MapRegion[];
+  metrics: MapDatasetMetrics;
+  legend: MapLegend[];
+}
+

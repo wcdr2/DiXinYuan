@@ -5,10 +5,15 @@ import { getDictionary } from "@/lib/site";
 
 interface GraphPageProps {
   params: Promise<{ lang: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function GraphPage({ params }: GraphPageProps) {
-  const { lang } = await params;
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function GraphPage({ params, searchParams }: GraphPageProps) {
+  const [{ lang }, rawSearchParams] = await Promise.all([params, searchParams]);
 
   if (!isLocale(lang)) {
     notFound();
@@ -19,6 +24,7 @@ export default async function GraphPage({ params }: GraphPageProps) {
   const articles = getArticles();
   const regionScopes = graph.regionScopes ?? [];
   const elementClasses = graph.taxonomy?.elementClasses ?? [];
+  const initialRegion = firstValue(rawSearchParams.region) ?? "all";
   const metricLabels =
     lang === "zh"
       ? { entities: "图谱节点", edges: "关系边", evidence: "证据来源" }
@@ -52,7 +58,7 @@ export default async function GraphPage({ params }: GraphPageProps) {
           <div className="graph-page__taxonomy-grid">
             {elementClasses.map((item, index) => (
               <div key={item.key} className="graph-page__taxonomy-card">
-                <span>0{index + 1}</span>
+                <span>{`0${index + 1}`}</span>
                 <strong>{lang === "zh" ? item.labelZh : item.labelEn}</strong>
                 <p>{lang === "zh" ? item.descriptionZh : item.descriptionEn}</p>
               </div>
@@ -71,13 +77,13 @@ export default async function GraphPage({ params }: GraphPageProps) {
           </div>
           <p className="panel-note">
             {lang === "zh"
-              ? "默认以广西为总范围，支持切换到重点城市和北部湾专题，查看空间要素与应用活动的差异。"
-              : "The graph starts from Guangxi and can be filtered to major cities and the Beibu Gulf topic."}
+              ? "默认从广西总览进入，也支持从地图模块带入具体区域上下文，查看对应的主体、目标、空间内容、活动和评价。"
+              : "The graph starts from Guangxi and can also open with a region context carried from the map module."}
           </p>
         </article>
       </section>
 
-      <GraphExplorer locale={lang} dataset={graph} articles={articles} />
+      <GraphExplorer locale={lang} dataset={graph} articles={articles} initialRegion={initialRegion} />
     </div>
   );
 }

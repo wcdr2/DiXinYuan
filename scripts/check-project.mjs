@@ -130,6 +130,7 @@ const sources = readJson("datasets/generated/sources.json");
 const graph = readJson("datasets/generated/knowledge-graph.json");
 const wordCloud = readJson("datasets/generated/word-cloud.json");
 const logs = readJson("datasets/generated/logs.json");
+const map = readJson("datasets/generated/map.json");
 const summary = readJson("datasets/generated/summary.json");
 
 const errors = [];
@@ -141,6 +142,9 @@ const articleSourceNames = new Set(articles.map((article) => article.sourceName)
 const sourceNameSet = new Set(sources.map((source) => source.name));
 const entityIdSet = new Set(graph.entities.map((entity) => entity.id));
 const elementCounts = new Map();
+const graphRegionScopeIds = new Set((graph.regionScopes ?? []).map((scope) => scope.id));
+const mapRegionIdSet = new Set((map.regions ?? []).map((region) => region.id));
+const geometryIdSet = new Set((map.geometryAssets ?? []).map((asset) => asset.id));
 
 for (const article of articles) {
   if (!article.id || articleIdSet.has(article.id)) {
@@ -271,6 +275,150 @@ for (const category of ["all", "enterprise", "technology", "policy"]) {
   }
 }
 
+if (!Array.isArray(map.regions) || map.regions.length !== 15) {
+  errors.push(`Map region count is invalid: ${map.regions?.length ?? 0}`);
+}
+
+if (!Array.isArray(map.geometryAssets) || map.geometryAssets.length < 15) {
+  errors.push(`Map geometry asset count is invalid: ${map.geometryAssets?.length ?? 0}`);
+}
+
+if (!map.viewBox || typeof map.viewBox !== "string") {
+  errors.push("Map viewBox is missing or invalid.");
+}
+
+const mapCityCount = map.regions.filter((region) => region.type === "city").length;
+const mapSpecialRegionCount = map.regions.filter((region) => region.type === "special-region").length;
+
+if (mapCityCount !== 14) {
+  errors.push(`Map city count is invalid: ${mapCityCount}`);
+}
+
+if (mapSpecialRegionCount !== 1) {
+  errors.push(`Map special-region count is invalid: ${mapSpecialRegionCount}`);
+}
+
+for (const region of map.regions) {
+  if (!region.id || !region.name || !region.nameEn || !region.summary || !region.summaryEn) {
+    errors.push(`Map region metadata is incomplete: ${region.id}`);
+  }
+
+  if (!Array.isArray(region.center) || region.center.length !== 2 || region.center.some((value) => typeof value !== "number")) {
+    errors.push(`Map region center is invalid: ${region.id}`);
+  }
+
+  if (region.zoom != null && typeof region.zoom !== "number") {
+    errors.push(`Map region zoom is invalid: ${region.id}`);
+  }
+
+  if (!region.bdDistrictName || typeof region.bdDistrictName !== "string") {
+    errors.push(`Map region bdDistrictName is missing: ${region.id}`);
+  }
+
+  if (!geometryIdSet.has(region.geometryKey)) {
+    errors.push(`Map region references missing geometry asset: ${region.id} -> ${region.geometryKey}`);
+  }
+
+  if ((region.articleIds?.length ?? 0) !== region.articleCount) {
+    errors.push(`Map region articleCount mismatch: ${region.id} -> ${region.articleCount} vs ${region.articleIds?.length ?? 0}`);
+  }
+
+  const categoryTotal =
+    (region.categoryCounts?.enterprise ?? 0) +
+    (region.categoryCounts?.technology ?? 0) +
+    (region.categoryCounts?.policy ?? 0);
+  if (categoryTotal !== region.articleCount) {
+    errors.push(`Map region category count mismatch: ${region.id} -> ${categoryTotal} vs ${region.articleCount}`);
+  }
+
+  if ((region.keywordHighlights?.length ?? 0) > 8) {
+    errors.push(`Map region keywordHighlights exceed limit: ${region.id}`);
+  }
+
+  for (const articleId of region.articleIds ?? []) {
+    if (!articleIdSet.has(articleId)) {
+      errors.push(`Map region references missing article: ${region.id} -> ${articleId}`);
+    }
+  }
+
+  for (const articleId of region.latestArticleIds ?? []) {
+    if (!articleIdSet.has(articleId)) {
+      errors.push(`Map region references missing latest article: ${region.id} -> ${articleId}`);
+    }
+  }
+
+  for (const entityId of region.entityIds ?? []) {
+    if (!entityIdSet.has(entityId)) {
+      errors.push(`Map region references missing entity: ${region.id} -> ${entityId}`);
+    }
+  }
+
+  const subjectEntityCount = (region.entityIds ?? []).filter(
+    (entityId) => graph.entities.find((entity) => entity.id === entityId)?.elementClass === "subject",
+  ).length;
+
+  if (subjectEntityCount !== region.subjectEntityCount) {
+    errors.push(`Map region subjectEntityCount mismatch: ${region.id} -> ${region.subjectEntityCount} vs ${subjectEntityCount}`);
+  }
+
+  if (region.graphRegionId && !graphRegionScopeIds.has(region.graphRegionId)) {
+    errors.push(`Map region graphRegionId is invalid: ${region.id} -> ${region.graphRegionId}`);
+  }
+
+  if (region.type === "city" && region.memberRegionIds?.length) {
+    errors.push(`City region should not contain memberRegionIds: ${region.id}`);
+  }
+
+  if (region.type === "special-region") {
+    if (!Array.isArray(region.memberRegionIds) || region.memberRegionIds.length === 0) {
+      errors.push(`Special map region missing memberRegionIds: ${region.id}`);
+    }
+
+    for (const memberRegionId of region.memberRegionIds ?? []) {
+      if (!mapRegionIdSet.has(memberRegionId)) {
+        errors.push(`Special map region references missing member region: ${region.id} -> ${memberRegionId}`);
+      }
+    }
+  }
+}
+
+const legendModes = new Set((map.legend ?? []).map((item) => item.mode));
+for (const mode of ["all", "enterprise", "technology", "policy"]) {
+  if (!legendModes.has(mode)) {
+    errors.push(`Map legend is missing mode: ${mode}`);
+  }
+}
+
+for (const item of map.legend ?? []) {
+  if (!Array.isArray(item.ranges) || item.ranges.length === 0) {
+    errors.push(`Map legend ranges are missing: ${item.mode}`);
+  }
+}
+
+if (map.metrics?.regionCount !== map.regions.length) {
+  errors.push(`Map metrics regionCount mismatch: ${map.metrics?.regionCount} vs ${map.regions.length}`);
+}
+
+if (map.metrics?.cityCount !== mapCityCount) {
+  errors.push(`Map metrics cityCount mismatch: ${map.metrics?.cityCount} vs ${mapCityCount}`);
+}
+
+if (map.metrics?.specialRegionCount !== mapSpecialRegionCount) {
+  errors.push(`Map metrics specialRegionCount mismatch: ${map.metrics?.specialRegionCount} vs ${mapSpecialRegionCount}`);
+}
+
+if (map.metrics?.totalArticles !== articles.length) {
+  errors.push(`Map metrics totalArticles mismatch: ${map.metrics?.totalArticles} vs ${articles.length}`);
+}
+
+if (map.metrics?.totalGraphEntities !== graph.entities.length) {
+  errors.push(`Map metrics totalGraphEntities mismatch: ${map.metrics?.totalGraphEntities} vs ${graph.entities.length}`);
+}
+
+if (Number.isNaN(Date.parse(map.updatedAt))) {
+  errors.push(`Map updatedAt is not a valid date: ${map.updatedAt}`);
+}
+
 const guangxiArticles = articles.filter((article) => article.isGuangxiRelated).length;
 
 if (summary.totalArticles !== articles.length) {
@@ -308,7 +456,13 @@ for (const relativePath of [
   "components/site-shell.tsx",
   "components/article-card.tsx",
   "components/graph-explorer.tsx",
+  "components/map-explorer.tsx",
+  "components/map-preview.tsx",
   "components/word-cloud.tsx",
+  "app/[lang]/map/page.tsx",
+  "datasets/seed/map-region-base.mjs",
+  "lib/baidu-map.ts",
+  ".env.example",
   "public/imagery/hero-field.svg",
   "public/imagery/radar-eye.svg",
   "public/imagery/geo-network.svg",

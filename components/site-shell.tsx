@@ -15,6 +15,7 @@ export function SiteShell({ locale, children }: SiteShellProps) {
     { label: dict.nav.home, href: withLocale(locale) },
     { label: dict.nav.news, href: withLocale(locale, "/news") },
     { label: dict.nav.wordCloud, href: withLocale(locale, "/word-cloud") },
+    { label: dict.nav.map, href: withLocale(locale, "/map") },
     { label: dict.nav.graph, href: withLocale(locale, "/knowledge-graph") },
     { label: dict.nav.sources, href: withLocale(locale, "/sources") },
     { label: dict.nav.about, href: withLocale(locale, "/about") },

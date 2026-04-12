@@ -16,6 +16,7 @@ interface GraphExplorerProps {
   locale: Locale;
   dataset: GraphDataset;
   articles: Article[];
+  initialRegion?: string;
 }
 
 const elementOrder: GraphElementClass[] = ["subject", "goal", "content", "activity", "evaluation"];
@@ -229,13 +230,17 @@ function getPreferredSelectionId(
   return ranked[0]?.id ?? entities[0]?.id ?? "";
 }
 
-export function GraphExplorer({ locale, dataset, articles }: GraphExplorerProps) {
+export function GraphExplorer({ locale, dataset, articles, initialRegion = "all" }: GraphExplorerProps) {
   const dict = getDictionary(locale);
   const articleLookup = useMemo(() => new Map(articles.map((article) => [article.id, article])), [articles]);
   const regionOptions = dataset.regionScopes ?? [];
   const [viewMode, setViewMode] = useState<"layered" | "network">("layered");
   const [activeClass, setActiveClass] = useState<GraphElementClass | "all">("all");
-  const [activeRegion, setActiveRegion] = useState<string>("all");
+  const [activeRegion, setActiveRegion] = useState<string>(
+    initialRegion === "all" || regionOptions.some((option) => option.id === initialRegion)
+      ? initialRegion
+      : "all",
+  );
   const [showAllEdges, setShowAllEdges] = useState(false);
   const [selectedId, setSelectedId] = useState(dataset.views?.network?.featuredEntityId ?? dataset.entities[0]?.id ?? "");
 

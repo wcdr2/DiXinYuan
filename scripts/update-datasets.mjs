@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { graphResearchBase } from "../datasets/seed/graph-research-base.mjs";
+import { guangxiMapBase } from "../datasets/seed/map-region-base.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -155,6 +156,26 @@ const blockedKeywordTerms = new Set([
 ]);
 
 const blockedOriginalHosts = new Set(["gzw.gxzf.gov.cn", "gxt.gxzf.gov.cn"]);
+
+const mapKeywordStopwords = new Set([
+  "广西",
+  "全国",
+  "北部湾",
+  "地球信息",
+  "空间信息",
+  "产业发展",
+  "研究门户",
+  "专题地图",
+  "服务能力",
+  "能力提升",
+]);
+
+const mapModeColors = {
+  all: ["#283e67", "#3f7fa8", "#51a9c7", "#6ce5f1"],
+  enterprise: ["#263d64", "#4d8ddb", "#7abfff", "#a5dbff"],
+  technology: ["#26485e", "#3d8d96", "#5fcdbf", "#96efd9"],
+  policy: ["#3f3a2e", "#8a7751", "#c6ae70", "#ecd79d"],
+};
 
 const industryChainBlueprint = [
   { sourceEntityId: "remote-sensing", targetEntityId: "real-scene-3d", relationType: "supports", keywords: ["遥感", "卫星", "实景三维"] },
@@ -1008,6 +1029,218 @@ function buildKnowledgeGraph(articles, baseEntities) {
   };
 }
 
+function normalizeMapKeyword(value) {
+  const term = cleanWhitespace(String(value ?? "")).replace(/[：:，,。；;、]+$/g, "");
+  if (!term || term.length < 2 || term.length > 24 || hasTemplateArtifacts(term)) {
+    return "";
+  }
+  return term;
+}
+
+function getMapMetric(region, mode) {
+  return mode === "all" ? region.articleCount : region.categoryCounts[mode];
+}
+
+function buildLegendRanges(max, mode) {
+  const colors = mapModeColors[mode];
+  if (max <= 0) {
+    return [
+      {
+        min: 0,
+        max: 0,
+        labelZh: "暂无数据",
+        labelEn: "No data",
+        color: colors[0],
+      },
+    ];
+  }
+
+  const first = Math.max(1, Math.ceil(max * 0.34));
+  const second = Math.max(first + 1, Math.ceil(max * 0.67));
+  const ranges = [
+    {
+      min: 0,
+      max: 0,
+      labelZh: "0",
+      labelEn: "0",
+      color: colors[0],
+    },
+    {
+      min: 1,
+      max: first,
+      labelZh: `1-${first} 篇`,
+      labelEn: `1-${first}`,
+      color: colors[1],
+    },
+    {
+      min: first + 1,
+      max: Math.min(second, max),
+      labelZh: `${first + 1}-${Math.min(second, max)} 篇`,
+      labelEn: `${first + 1}-${Math.min(second, max)}`,
+      color: colors[2],
+    },
+    {
+      min: Math.min(second + 1, max),
+      max,
+      labelZh: `${Math.min(second + 1, max)}-${max} 篇`,
+      labelEn: `${Math.min(second + 1, max)}-${max}`,
+      color: colors[3],
+    },
+  ];
+
+  return ranges.filter((range, index, list) => {
+    if (range.min > range.max) {
+      return false;
+    }
+    return index === list.findIndex((item) => item.min === range.min && item.max === range.max);
+  });
+}
+
+function collectRegionKeywords(articles, blockedTerms) {
+  const bag = new Map();
+
+  articles.forEach((article) => {
+    const weight = article.isGuangxiRelated ? 2 : 1;
+    (article.keywords ?? []).forEach((keyword) => {
+      const term = normalizeMapKeyword(keyword);
+      if (!term || blockedTerms.has(term) || blockedTerms.has(term.toLowerCase()) || mapKeywordStopwords.has(term)) {
+        return;
+      }
+      bag.set(term, (bag.get(term) ?? 0) + weight);
+    });
+  });
+
+  return [...bag.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "zh-CN"))
+    .map(([term]) => term)
+    .slice(0, 8);
+}
+
+function inferArticleMapRegionIds(article, cityRegions, entityLookup) {
+  const text = articleTextForMatching(article);
+  const matched = new Set();
+
+  cityRegions.forEach((region) => {
+    const terms = unique([region.name, ...(region.aliases ?? []), ...(region.matchTerms ?? [])]);
+    const explicitHit = (article.regionTags ?? []).some((tag) => terms.includes(tag));
+    const entityHit = (article.entityIds ?? []).some((entityId) =>
+      entityLookup.get(entityId)?.regionIds?.includes(region.id),
+    );
+    const mentionHit = terms.some((term) => text.includes(term));
+
+    if (explicitHit || entityHit || mentionHit) {
+      matched.add(region.id);
+    }
+  });
+
+  const beibuRegion = guangxiMapBase.regions.find((region) => region.id === "beibu-gulf");
+  const beibuTerms = unique([
+    beibuRegion?.name,
+    ...(beibuRegion?.aliases ?? []),
+    ...(beibuRegion?.matchTerms ?? []),
+  ]);
+  const beibuMention = beibuTerms.some((term) => term && text.includes(term));
+  const beibuMemberHit = (beibuRegion?.memberRegionIds ?? []).some((regionId) => matched.has(regionId));
+  if (beibuMention || beibuMemberHit) {
+    matched.add("beibu-gulf");
+  }
+
+  return matched;
+}
+
+function buildMapDataset(articles, graph) {
+  const entityLookup = new Map(graph.entities.map((entity) => [entity.id, entity]));
+  const cityRegions = guangxiMapBase.regions.filter((region) => region.type === "city");
+  const articleRegionLookup = new Map(
+    articles.map((article) => [article.id, inferArticleMapRegionIds(article, cityRegions, entityLookup)]),
+  );
+
+  const regions = guangxiMapBase.regions.map((region) => {
+    const scopedRegionIds = new Set([region.id, ...(region.memberRegionIds ?? [])]);
+    const matchingArticles = [...articles]
+      .filter((article) => {
+        const matched = articleRegionLookup.get(article.id) ?? new Set();
+        return [...scopedRegionIds].some((regionId) => matched.has(regionId));
+      })
+      .sort((left, right) => right.publishedAt.localeCompare(left.publishedAt));
+
+    const articleIds = matchingArticles.map((article) => article.id);
+    const categoryCounts = {
+      enterprise: matchingArticles.filter((article) => article.category === "enterprise").length,
+      technology: matchingArticles.filter((article) => article.category === "technology").length,
+      policy: matchingArticles.filter((article) => article.category === "policy").length,
+    };
+
+    const graphEntityIds = graph.entities
+      .filter((entity) => (entity.regionIds ?? []).some((regionId) => scopedRegionIds.has(regionId)))
+      .map((entity) => entity.id);
+
+    const entityIds = unique([...graphEntityIds, ...matchingArticles.flatMap((article) => article.entityIds ?? [])]);
+    const subjectEntityCount = entityIds.filter(
+      (entityId) => entityLookup.get(entityId)?.elementClass === "subject",
+    ).length;
+
+    const blockedTerms = new Set(
+      unique([
+        "广西",
+        "全国",
+        region.name,
+        region.nameEn,
+        ...(region.aliases ?? []),
+        ...(region.matchTerms ?? []),
+        ...(region.memberRegionIds ?? []),
+      ]).map((value) => String(value).toLowerCase()),
+    );
+
+    return {
+      id: region.id,
+      name: region.name,
+      nameEn: region.nameEn,
+      type: region.type,
+      geometryKey: region.geometryKey,
+      center: region.center,
+      zoom: region.zoom,
+      bdDistrictName: region.bdDistrictName,
+      summary: region.summary,
+      summaryEn: region.summaryEn,
+      articleCount: articleIds.length,
+      articleIds,
+      categoryCounts,
+      keywordHighlights: collectRegionKeywords(matchingArticles, blockedTerms),
+      entityIds,
+      latestArticleIds: articleIds.slice(0, 5),
+      subjectEntityCount,
+      isPriorityRegion: Boolean(region.isPriorityRegion),
+      graphRegionId: region.graphRegionId || undefined,
+      memberRegionIds: region.memberRegionIds ?? undefined,
+    };
+  });
+
+  const legend = ["all", "enterprise", "technology", "policy"].map((mode) => ({
+    mode,
+    ranges: buildLegendRanges(
+      Math.max(...regions.map((region) => getMapMetric(region, mode)), 0),
+      mode,
+    ),
+  }));
+
+  return {
+    updatedAt: new Date().toISOString(),
+    viewBox: guangxiMapBase.viewBox,
+    geometryAssets: guangxiMapBase.geometryAssets,
+    regions,
+    metrics: {
+      regionCount: regions.length,
+      cityCount: regions.filter((region) => region.type === "city").length,
+      specialRegionCount: regions.filter((region) => region.type === "special-region").length,
+      priorityRegionCount: regions.filter((region) => region.isPriorityRegion).length,
+      totalArticles: articles.length,
+      totalGraphEntities: graph.entities.length,
+    },
+    legend,
+  };
+}
+
 function buildSummary(articles, sources, graph) {
   return {
     totalArticles: articles.length,
@@ -1500,6 +1733,7 @@ async function main() {
 
   const dedupedArticles = dedupeArticles(normalizedArticles);
   const graph = buildKnowledgeGraph(dedupedArticles, baseEntities);
+  const map = buildMapDataset(dedupedArticles, graph);
   const wordCloud = buildWordCloud(dedupedArticles);
   const logs = finalizeLogs(sources, crawlResults, dedupedArticles, fallbackSeedArticles);
   const summary = buildSummary(dedupedArticles, sources, graph);
@@ -1509,6 +1743,7 @@ async function main() {
     writeFile(path.join(generatedDir, "sources.json"), JSON.stringify(sources, null, 2)),
     writeFile(path.join(generatedDir, "word-cloud.json"), JSON.stringify(wordCloud, null, 2)),
     writeFile(path.join(generatedDir, "knowledge-graph.json"), JSON.stringify(graph, null, 2)),
+    writeFile(path.join(generatedDir, "map.json"), JSON.stringify(map, null, 2)),
     writeFile(path.join(generatedDir, "logs.json"), JSON.stringify(logs, null, 2)),
     writeFile(path.join(generatedDir, "summary.json"), JSON.stringify(summary, null, 2)),
   ]);

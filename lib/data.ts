@@ -1,6 +1,7 @@
 ﻿import articles from "@/datasets/generated/articles.json";
 import graph from "@/datasets/generated/knowledge-graph.json";
 import logs from "@/datasets/generated/logs.json";
+import map from "@/datasets/generated/map.json";
 import sources from "@/datasets/generated/sources.json";
 import summary from "@/datasets/generated/summary.json";
 import wordCloud from "@/datasets/generated/word-cloud.json";
@@ -11,6 +12,7 @@ import type {
   CrawlLog,
   Entity,
   GraphDataset,
+  MapDataset,
   Locale,
   Source,
   SummaryMetrics,
@@ -59,6 +61,10 @@ export function getGraphEntities(): Entity[] {
   return getGraphDataset().entities;
 }
 
+export function getMapDataset(): MapDataset {
+  return map as MapDataset;
+}
+
 export function getLogs(): CrawlLog[] {
   return logs as CrawlLog[];
 }
@@ -71,18 +77,27 @@ export interface ArticleFilters {
   query?: string;
   category?: ArticleCategory | "all";
   source?: string;
+  region?: string;
   guangxi?: "all" | "only";
   sort?: "latest" | "oldest";
 }
 
 export function filterArticles(filters: ArticleFilters): Article[] {
   const normalizedQuery = filters.query?.trim().toLowerCase();
+  const regionArticleIds =
+    filters.region && filters.region !== "all"
+      ? new Set(getMapDataset().regions.find((region) => region.id === filters.region)?.articleIds ?? [])
+      : null;
   const results = getArticles().filter((article) => {
     if (filters.category && filters.category !== "all" && article.category !== filters.category) {
       return false;
     }
 
     if (filters.source && filters.source !== "all" && article.sourceName !== filters.source) {
+      return false;
+    }
+
+    if (regionArticleIds && !regionArticleIds.has(article.id)) {
       return false;
     }
 

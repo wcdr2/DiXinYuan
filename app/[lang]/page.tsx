@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MapPreview } from "@/components/map-preview";
 import { WordCloud } from "@/components/word-cloud";
 import {
   formatDate,
@@ -7,6 +8,7 @@ import {
   getFeaturedArticles,
   getGraphDataset,
   getLatestByCategory,
+  getMapDataset,
   getSources,
   getWordCloudItems,
   isLocale,
@@ -51,6 +53,7 @@ export default async function HomePage({ params }: HomePageProps) {
   const articles = getArticles();
   const featured = getFeaturedArticles();
   const graph = getGraphDataset();
+  const mapDataset = getMapDataset();
   const wordCloud = getWordCloudItems("all").slice(0, 14);
   const highlightedSources = getSources().slice(0, 6);
   const latestByCategory = categoryOrder.map((category) => ({
@@ -221,7 +224,7 @@ export default async function HomePage({ params }: HomePageProps) {
       </section>
 
       <section className="home-section home-section--contrast">
-        <div className="shell analytics-grid">
+        <div className="shell analytics-grid analytics-grid--tri">
           <div className="card-panel analytics-panel analytics-panel--heroic">
             <div className="section-heading-row">
               <div>
@@ -233,6 +236,19 @@ export default async function HomePage({ params }: HomePageProps) {
               </Link>
             </div>
             <WordCloud locale={lang} items={wordCloud} variant="dark" />
+          </div>
+          <div className="card-panel analytics-panel analytics-panel--heroic analytics-panel--map">
+            <div className="section-heading-row">
+              <div>
+                <p className="section-kicker">{dict.home.analytics}</p>
+                <h2>{dict.pageIntro.mapTitle}</h2>
+              </div>
+              <Link href={withLocale(lang, "/map")} className="text-link text-link--light">
+                {dict.cards.allMap}
+              </Link>
+            </div>
+            <p className="panel-note panel-note--light">{dict.pageIntro.mapSummary}</p>
+            <MapPreview locale={lang} dataset={mapDataset} />
           </div>
           <div className="card-panel analytics-panel analytics-panel--heroic">
             <div className="section-heading-row">

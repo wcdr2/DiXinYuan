@@ -1,7 +1,7 @@
 ﻿import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArticleCard } from "@/components/article-card";
-import { filterArticles, formatDate, getSources, isLocale } from "@/lib/data";
+import { filterArticles, formatDate, getMapDataset, getSources, isLocale } from "@/lib/data";
 import {
   categoryLabels,
   categoryOrder,
@@ -33,12 +33,14 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
     query: firstValue(rawSearchParams.query),
     category: (firstValue(rawSearchParams.category) as "enterprise" | "technology" | "policy" | "all" | undefined) ?? "all",
     source: firstValue(rawSearchParams.source) ?? "all",
+    region: firstValue(rawSearchParams.region) ?? "all",
     guangxi: (firstValue(rawSearchParams.guangxi) as "all" | "only" | undefined) ?? "all",
     sort: (firstValue(rawSearchParams.sort) as "latest" | "oldest" | undefined) ?? "latest",
   };
 
   const articles = filterArticles(filters);
   const sources = getSources();
+  const regionOptions = getMapDataset().regions;
   const leadArticle = articles[0];
   const leadCover = getCoverSurface(leadArticle?.coverImage);
   const leadSourceAccess = leadArticle ? getSourceAccessUrls(leadArticle.originalUrl, leadArticle.sourceUrl) : null;
@@ -49,6 +51,7 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
     Boolean(filters.query) ||
     filters.category !== "all" ||
     filters.source !== "all" ||
+    filters.region !== "all" ||
     filters.guangxi !== "all" ||
     filters.sort !== "latest";
 
@@ -90,6 +93,17 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
                 {sources.map((source) => (
                   <option key={source.id} value={source.name}>
                     {source.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>{dict.filters.region}</span>
+              <select name="region" defaultValue={filters.region}>
+                <option value="all">{dict.filters.all}</option>
+                {regionOptions.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {lang === "zh" ? region.name : region.nameEn}
                   </option>
                 ))}
               </select>
