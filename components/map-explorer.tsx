@@ -57,6 +57,81 @@ const modePalette = {
   },
 } as const;
 
+const runtimeLabels = {
+  zh: {
+    all: "综合",
+    enterprise: "企业",
+    technology: "技术",
+    policy: "政策",
+    regionCoverage: "覆盖区域",
+    reset: "返回广西总览",
+    trend: "当前观察",
+    ranking: "重点区域排序",
+    legend: "热度分级",
+    totalArticles: "关联文章",
+    subjectCount: "主体节点",
+    latestArticles: "最新相关文章",
+    keywords: "高频关键词",
+    noKeywords: "当前区域暂无稳定关键词。",
+    noArticles: "当前区域暂无可展示的相关文章。",
+    openNews: "查看该城市新闻",
+    openGraph: "查看该城市图谱",
+    cityRegion: "城市单元",
+    mapTip: "悬停查看核心指标，点击锁定区域详情。",
+    coverage: "百度真实矢量底图 + 广西 14 市联动分析",
+    total: "总量",
+    enterpriseShort: "企业",
+    technologyShort: "技术",
+    policyShort: "政策",
+    loading: "正在加载百度真实地图与行政区边界...",
+    setupTitle: "地图尚未完成本地接入",
+    setupBody: "请在 `.env.local` 中填写 `NEXT_PUBLIC_BAIDU_MAP_AK`，并在百度地图控制台的 Referer 白名单中写入 `localhost,127.0.0.1`。",
+    setupReferer: "Referer 白名单建议：localhost,127.0.0.1",
+    errorTitle: "地图加载失败",
+    errorBody: "请检查 AK 是否为浏览器端 JavaScript API AK，并确认 Referer 白名单已包含 localhost 或 127.0.0.1。",
+    liveMap: "百度真实地图",
+    noBoundary: "部分城市边界未成功返回，已跳过对应高亮。",
+    baseLayer: "真实底图",
+    overview: "广西总览",
+  },
+  en: {
+    all: "All",
+    enterprise: "Enterprise",
+    technology: "Technology",
+    policy: "Policy",
+    regionCoverage: "Coverage",
+    reset: "Back to Guangxi overview",
+    trend: "Current spotlight",
+    ranking: "Priority regions",
+    legend: "Legend",
+    totalArticles: "Articles",
+    subjectCount: "Subject nodes",
+    latestArticles: "Latest linked articles",
+    keywords: "Keyword highlights",
+    noKeywords: "No stable keywords yet for this region.",
+    noArticles: "No related articles are available for this region yet.",
+    openNews: "Open city news",
+    openGraph: "Open city graph",
+    cityRegion: "City unit",
+    mapTip: "Hover to inspect metrics and click to lock the region detail.",
+    coverage: "Baidu vector basemap + Guangxi's 14 city-level analytical view",
+    total: "Total",
+    enterpriseShort: "Enterprise",
+    technologyShort: "Technology",
+    policyShort: "Policy",
+    loading: "Loading the Baidu basemap and district boundaries...",
+    setupTitle: "The live map is not configured yet",
+    setupBody: "Add `NEXT_PUBLIC_BAIDU_MAP_AK` to `.env.local`, then set the Baidu Map Referer whitelist to `localhost,127.0.0.1`.",
+    setupReferer: "Recommended Referer whitelist: localhost,127.0.0.1",
+    errorTitle: "Map failed to load",
+    errorBody: "Check whether the AK is a browser JavaScript API key and whether the Referer whitelist contains localhost or 127.0.0.1.",
+    liveMap: "Baidu live map",
+    noBoundary: "Some city boundaries were not returned and were skipped.",
+    baseLayer: "Live basemap",
+    overview: "Guangxi overview",
+  },
+} as const;
+
 const labels = {
   zh: {
     all: "综合",
@@ -207,17 +282,7 @@ function getRegionFillOpacity(region: MapRegion, mode: MapMode, maxValue: number
   return Math.max(baseCityOpacity, Math.min(0.82, opacity));
 }
 
-function getPolygonStyle(region: MapRegion, mode: MapMode, maxValue: number, emphasized: boolean, beibuMemberActive: boolean) {
-  if (beibuMemberActive) {
-    return {
-      fillColor: modePalette.policy.fill,
-      fillOpacity: emphasized ? 0.68 : 0.52,
-      strokeColor: modePalette.policy.stroke,
-      strokeOpacity: 0.95,
-      strokeWeight: emphasized ? 4 : 3,
-    };
-  }
-
+function getPolygonStyle(region: MapRegion, mode: MapMode, maxValue: number, emphasized: boolean) {
   const palette = modePalette[mode];
   return {
     fillColor: palette.fill,
@@ -228,18 +293,14 @@ function getPolygonStyle(region: MapRegion, mode: MapMode, maxValue: number, emp
   };
 }
 
-function getLabelStyles(emphasized: boolean, isSpecial: boolean) {
+function getLabelStyles(emphasized: boolean) {
   return {
     color: emphasized ? "#ffffff" : "rgba(244, 250, 255, 0.92)",
     fontSize: emphasized ? "14px" : "13px",
     fontWeight: emphasized ? "800" : "700",
     padding: emphasized ? "8px 14px" : "7px 12px",
     borderRadius: "999px",
-    border: isSpecial
-      ? "1px dashed rgba(255, 241, 186, 0.88)"
-      : emphasized
-        ? "1px solid rgba(255, 255, 255, 0.82)"
-        : "1px solid rgba(120, 210, 255, 0.46)",
+    border: emphasized ? "1px solid rgba(255, 255, 255, 0.82)" : "1px solid rgba(120, 210, 255, 0.46)",
     background: emphasized ? "rgba(8, 18, 36, 0.9)" : "rgba(8, 18, 36, 0.78)",
     boxShadow: emphasized ? "0 0 24px rgba(108, 229, 241, 0.18)" : "none",
     whiteSpace: "nowrap",
@@ -262,10 +323,10 @@ export function MapExplorer({
     return null;
   }
 
-  const copy = labels[locale];
+  const copy = runtimeLabels[locale];
   const ak = process.env.NEXT_PUBLIC_BAIDU_MAP_AK ?? "";
   const styleId = process.env.NEXT_PUBLIC_BAIDU_MAP_STYLE_ID ?? "";
-  const cityRegions = useMemo(() => dataset.regions.filter((region) => region.type === "city"), [dataset.regions]);
+  const cityRegions = useMemo(() => dataset.regions, [dataset.regions]);
   const articleLookup = useMemo(() => new Map(articles.map((article) => [article.id, article])), [articles]);
   const regionLookup = useMemo(() => new Map(dataset.regions.map((region) => [region.id, region])), [dataset.regions]);
   const defaultRegionId = useMemo(() => {
@@ -313,10 +374,6 @@ export function MapExplorer({
           left.name.localeCompare(right.name, "zh-CN"),
       ),
     [dataset.regions, mode],
-  );
-  const beibuMemberIds = useMemo(
-    () => new Set(dataset.regions.find((region) => region.id === "beibu-gulf")?.memberRegionIds ?? []),
-    [dataset.regions],
   );
   const overviewMetric = useMemo(
     () => cityRegions.reduce((total, region) => total + getMetric(region, mode), 0),
@@ -432,7 +489,7 @@ export function MapExplorer({
             position: buildBMapPoint(BMapGL, focusCenter),
             offset: new BMapGL.Size(0, 0),
           });
-          label.setStyle?.(getLabelStyles(false, false));
+          label.setStyle?.(getLabelStyles(false));
           label.addEventListener("mouseover", () => setHoveredRegionId(region.id));
           label.addEventListener("mouseout", () => setHoveredRegionId(""));
           label.addEventListener("click", () => {
@@ -444,24 +501,6 @@ export function MapExplorer({
 
           overlayRegistryRef.current.set(region.id, { polygons, label, focusCenter });
         });
-
-        const beibuRegion = regionLookup.get("beibu-gulf");
-        if (beibuRegion) {
-          const beibuLabel = new BMapGL.Label(copy.beibuFocus, {
-            position: buildBMapPoint(BMapGL, beibuRegion.center),
-            offset: new BMapGL.Size(0, 14),
-          });
-          beibuLabel.setStyle?.(getLabelStyles(false, true));
-          beibuLabel.addEventListener("mouseover", () => setHoveredRegionId("beibu-gulf"));
-          beibuLabel.addEventListener("mouseout", () => setHoveredRegionId(""));
-          beibuLabel.addEventListener("click", () => {
-            setSelectedRegionId("beibu-gulf");
-            setIsOverviewMode(false);
-            setFocusNonce((value) => value + 1);
-          });
-          map.addOverlay(beibuLabel);
-          overlayRegistryRef.current.set("beibu-gulf", { polygons: [], label: beibuLabel, focusCenter: beibuRegion.center });
-        }
 
         setBoundaryFailureCount(failures);
         setMapReady(true);
@@ -492,7 +531,7 @@ export function MapExplorer({
       bmapRef.current = null;
       setMapReady(false);
     };
-  }, [ak, cityRegions, copy.beibuFocus, copy.errorBody, copy.setupBody, locale, regionLookup, styleId]);
+  }, [ak, cityRegions, copy.errorBody, copy.setupBody, locale, regionLookup, styleId]);
 
   useEffect(() => {
     overlayRegistryRef.current.forEach((entry, regionId) => {
@@ -503,9 +542,8 @@ export function MapExplorer({
 
       const isHovered = hoveredRegionId === regionId;
       const isSelected = !isOverviewMode && selectedRegionId === regionId;
-      const beibuMemberActive = !isOverviewMode && selectedRegionId === "beibu-gulf" && beibuMemberIds.has(regionId);
-      const emphasized = isHovered || isSelected || beibuMemberActive;
-      const polygonStyle = getPolygonStyle(region, mode, maxValue, emphasized, beibuMemberActive);
+      const emphasized = isHovered || isSelected;
+      const polygonStyle = getPolygonStyle(region, mode, maxValue, emphasized);
 
       entry.polygons.forEach((polygon) => {
         polygon.setFillColor?.(polygonStyle.fillColor);
@@ -515,10 +553,9 @@ export function MapExplorer({
         polygon.setStrokeOpacity?.(polygonStyle.strokeOpacity);
       });
 
-      const isSpecial = regionId === "beibu-gulf";
-      entry.label?.setStyle?.(getLabelStyles(emphasized, isSpecial));
+      entry.label?.setStyle?.(getLabelStyles(emphasized));
     });
-  }, [beibuMemberIds, hoveredRegionId, isOverviewMode, maxValue, mode, regionLookup, selectedRegionId]);
+  }, [hoveredRegionId, isOverviewMode, maxValue, mode, regionLookup, selectedRegionId]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -545,15 +582,7 @@ export function MapExplorer({
             <p className="section-kicker">{copy.trend}</p>
             <h2>{stageTitle}</h2>
             <p className="panel-note">
-              {hoveredRegion
-                ? hoveredRegion.type === "special-region"
-                  ? copy.specialRegion
-                  : copy.cityRegion
-                : isOverviewMode
-                  ? copy.regionCoverage
-                  : spotlightRegion.type === "special-region"
-                    ? copy.specialRegion
-                    : copy.cityRegion}
+              {isOverviewMode && !hoveredRegion ? copy.regionCoverage : copy.cityRegion}
             </p>
           </div>
           <div className="map-toolbar__actions">
@@ -574,17 +603,6 @@ export function MapExplorer({
               ))}
             </div>
             <div className="map-toolbar__secondary">
-              <button
-                type="button"
-                className={selectedRegionId === "beibu-gulf" ? "button-secondary button-secondary--gold" : "button-secondary button-secondary--ghost"}
-                onClick={() => {
-                  setSelectedRegionId("beibu-gulf");
-                  setIsOverviewMode(false);
-                  setFocusNonce((value) => value + 1);
-                }}
-              >
-                {copy.beibuFocus}
-              </button>
               <button
                 type="button"
                 className="button-secondary button-secondary--ghost"
@@ -691,9 +709,7 @@ export function MapExplorer({
 
         <aside className="card-panel map-detail">
           <div className="map-detail__header">
-            <span className={`entity-badge ${selectedRegion.type === "special-region" ? "entity-badge--gold" : ""}`}>
-              {selectedRegion.type === "special-region" ? copy.specialRegion : copy.cityRegion}
-            </span>
+            <span className="entity-badge">{copy.cityRegion}</span>
             <h3>{getRegionLabel(locale, selectedRegion)}</h3>
             <p>{locale === "zh" ? selectedRegion.summary : selectedRegion.summaryEn}</p>
           </div>

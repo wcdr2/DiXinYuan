@@ -140,6 +140,7 @@ export interface Entity {
   parentId?: string;
   regionIds?: string[];
   tags?: string[];
+  sourceRefs?: EvidenceRef[];
   scorecard?: Scorecard;
   displayOrder?: number;
 }
@@ -228,7 +229,7 @@ export interface MapRegion {
   id: string;
   name: string;
   nameEn: string;
-  type: "city" | "special-region";
+  type: "city";
   geometryKey: string;
   center: [number, number];
   zoom?: number;
@@ -244,13 +245,11 @@ export interface MapRegion {
   subjectEntityCount: number;
   isPriorityRegion: boolean;
   graphRegionId?: string;
-  memberRegionIds?: string[];
 }
 
 export interface MapDatasetMetrics {
   regionCount: number;
   cityCount: number;
-  specialRegionCount: number;
   priorityRegionCount: number;
   totalArticles: number;
   totalGraphEntities: number;

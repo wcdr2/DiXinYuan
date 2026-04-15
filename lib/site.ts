@@ -120,7 +120,7 @@ export const dictionaries = {
       cloudTitle: "产业词云",
       cloudSummary: "基于最近 30 天已发布新闻提取关键词，支持按栏目查看并跳转至对应结果。",
       mapTitle: "广西地球信息产业专题地图",
-      mapSummary: "以广西 14 个设区市和北部湾专题区域为入口，联动新闻热度、关键词和图谱主体，形成城市级研究视图。",
+      mapSummary: "以广西 14 个设区市为入口，联动新闻热度、关键词和图谱主体，形成城市级研究视图。",
       graphTitle: "地球空间信息赋能知识图谱",
       graphSummary:
         "围绕主体、目标、内容、活动、评价五类要素构建广西地球空间信息赋能知识图谱，并用新闻证据与调研依据共同支撑结构化展示。",
@@ -256,7 +256,7 @@ export const dictionaries = {
       cloudSummary: "Keywords are generated from the latest 30-day article set and can route into filtered news results.",
       mapTitle: "Guangxi Thematic Geo-Industry Map",
       mapSummary:
-        "The map organizes Guangxi's 14 prefecture-level cities and the Beibu Gulf topic into a city-level analytical view connected to news, keywords and graph entities.",
+        "The map organizes Guangxi's 14 prefecture-level cities into a city-level analytical view connected to news, keywords and graph entities.",
       graphTitle: "Geospatial Enablement Knowledge Graph",
       graphSummary:
         "The graph organizes Guangxi geospatial enablement through five layers: subject, goal, content, activity and evaluation, backed by news evidence and research notes.",

@@ -77,8 +77,8 @@ export default async function GraphPage({ params, searchParams }: GraphPageProps
           </div>
           <p className="panel-note">
             {lang === "zh"
-              ? "默认从广西总览进入，也支持从地图模块带入具体区域上下文，查看对应的主体、目标、空间内容、活动和评价。"
-              : "The graph starts from Guangxi and can also open with a region context carried from the map module."}
+              ? "默认从广西总览进入，也支持从地图模块带入具体城市上下文，查看对应的主体、目标、内容、活动和评价。"
+              : "The graph starts from Guangxi and can also open with a city context carried from the map module."}
           </p>
         </article>
       </section>

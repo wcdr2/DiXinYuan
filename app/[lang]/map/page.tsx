@@ -34,7 +34,7 @@ export default async function MapPage({ params, searchParams }: MapPageProps) {
           regions: "覆盖区域",
           articles: "关联新闻",
           entities: "关联图谱实体",
-          focus: "重点区域",
+          focus: "重点城市",
           modes: "专题模式",
           coverage: "区域覆盖",
         }
@@ -42,7 +42,7 @@ export default async function MapPage({ params, searchParams }: MapPageProps) {
           regions: "Regions",
           articles: "Linked articles",
           entities: "Graph entities",
-          focus: "Priority regions",
+          focus: "Priority cities",
           modes: "Views",
           coverage: "Coverage",
         };
@@ -98,8 +98,8 @@ export default async function MapPage({ params, searchParams }: MapPageProps) {
           </div>
           <p className="panel-note">
             {lang === "zh"
-              ? `最新一次地图数据刷新时间：${formatDate(lang, dataset.updatedAt)}；北部湾作为专题区域单独呈现，不与普通城市单元混合。`
-              : `Latest map refresh: ${formatDate(lang, dataset.updatedAt)}. The Beibu Gulf is rendered as a separate thematic region.`}
+              ? `最新一次地图数据刷新时间：${formatDate(lang, dataset.updatedAt)}；地图仅保留广西 14 市真实城市单元，不再单列北部湾专题区域。`
+              : `Latest map refresh: ${formatDate(lang, dataset.updatedAt)}. The map now keeps only Guangxi's 14 city units and no longer exposes Beibu Gulf as a separate region.`}
           </p>
           <div className="map-page__mini-metrics">
             <div>

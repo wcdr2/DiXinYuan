@@ -76,6 +76,74 @@ const relationLabels: Record<Locale, Record<GraphRelationType, string>> = {
   },
 };
 
+const runtimeTaxonomy = {
+  zh: {
+    subject: { label: "主体", description: "赋能主体" },
+    goal: { label: "目标", description: "目标价值" },
+    content: { label: "内容", description: "空间要素" },
+    activity: { label: "活动", description: "技术载体与协同活动" },
+    evaluation: { label: "评价", description: "效能评价" },
+  },
+  en: {
+    subject: { label: "Subject", description: "Actors" },
+    goal: { label: "Goal", description: "Value goals" },
+    content: { label: "Content", description: "Spatial factors" },
+    activity: { label: "Activity", description: "Carriers and actions" },
+    evaluation: { label: "Evaluation", description: "Score and effect" },
+  },
+} as const;
+
+const runtimeRelationLabels: Record<Locale, Record<GraphRelationType, string>> = {
+  zh: {
+    related: "相关",
+    guides: "引导",
+    drives: "驱动",
+    supports: "支撑",
+    located_in: "位于",
+    pursues: "面向",
+    organizes: "组织",
+    focuses_on: "聚焦",
+    enables: "赋能",
+    constrains: "约束",
+    collaborates_with: "协同",
+    assesses: "评估",
+  },
+  en: relationLabels.en,
+};
+
+const runtimeUiLabels = {
+  zh: {
+    nodeCount: "个节点",
+    edgeCount: "条关系",
+    linkedArticles: "相关文章",
+    directRelations: "直接关系",
+    allEvidence: "证据与依据",
+    emptyColumn: "当前筛选下暂无节点",
+    scoreLabels: {
+      factorSupport: "要素保障",
+      carrierCapacity: "技术承载",
+      collaborationLevel: "协同水平",
+      applicationOutput: "应用成效",
+      comprehensiveBenefit: "综合效益",
+    },
+  },
+  en: {
+    nodeCount: "nodes",
+    edgeCount: "relations",
+    linkedArticles: "linked articles",
+    directRelations: "direct relations",
+    allEvidence: "Evidence and notes",
+    emptyColumn: "No nodes in this column",
+    scoreLabels: {
+      factorSupport: "Factor support",
+      carrierCapacity: "Carrier capacity",
+      collaborationLevel: "Collaboration",
+      applicationOutput: "Application output",
+      comprehensiveBenefit: "Benefit",
+    },
+  },
+} as const;
+
 function wrapLabel(value: string, size = 8) {
   const normalized = String(value ?? "").replace(/\s+/g, "");
   if (!normalized) {
@@ -86,12 +154,12 @@ function wrapLabel(value: string, size = 8) {
     if (words.length <= 2 && normalized.length <= 18) {
       return [normalized];
     }
-    return [normalized.slice(0, 14), `${normalized.slice(14, 26)}${normalized.length > 26 ? "…" : ""}`];
+    return [normalized.slice(0, 14), `${normalized.slice(14, 26)}${normalized.length > 26 ? "..." : ""}`];
   }
   if (normalized.length <= size) {
     return [normalized];
   }
-  return [normalized.slice(0, size), `${normalized.slice(size, size * 2)}${normalized.length > size * 2 ? "…" : ""}`];
+  return [normalized.slice(0, size), `${normalized.slice(size, size * 2)}${normalized.length > size * 2 ? "..." : ""}`];
 }
 
 function estimateLabelWidth(lines: string[]) {
@@ -122,7 +190,7 @@ function getLayerLabel(locale: Locale, dataset: GraphDataset, value: GraphElemen
       description: locale === "zh" ? current.descriptionZh : current.descriptionEn,
     };
   }
-  return defaultTaxonomy[locale][value];
+  return runtimeTaxonomy[locale][value] ?? defaultTaxonomy[locale][value];
 }
 
 function getNetworkPositions(entities: GraphDataset["entities"], selectedId: string) {
@@ -138,11 +206,11 @@ function getNetworkPositions(entities: GraphDataset["entities"], selectedId: str
       labelPosition: "top" | "bottom" | "left" | "right";
     }
   > = {
-    subject: { centerX: 365, centerY: 230, columns: 1, dx: 0, dy: 92, labelPosition: "left" },
-    goal: { centerX: 1065, centerY: 250, columns: 1, dx: 0, dy: 116, labelPosition: "right" },
-    content: { centerX: 365, centerY: 640, columns: 1, dx: 0, dy: 92, labelPosition: "left" },
+    subject: { centerX: 365, centerY: 230, columns: 2, dx: 150, dy: 92, labelPosition: "left" },
+    goal: { centerX: 1065, centerY: 250, columns: 2, dx: 150, dy: 108, labelPosition: "right" },
+    content: { centerX: 365, centerY: 640, columns: 2, dx: 150, dy: 92, labelPosition: "left" },
     activity: { centerX: 700, centerY: 155, columns: 4, dx: 172, dy: 94, labelPosition: "top" },
-    evaluation: { centerX: 1065, centerY: 630, columns: 1, dx: 0, dy: 108, labelPosition: "right" },
+    evaluation: { centerX: 1065, centerY: 630, columns: 2, dx: 150, dy: 104, labelPosition: "right" },
   };
   const grouped = Object.fromEntries(
     elementOrder.map((value) => [value, entities.filter((entity) => entity.id !== selectedId && entity.elementClass === value)]),
@@ -293,11 +361,18 @@ export function GraphExplorer({ locale, dataset, articles, initialRegion = "all"
     () => new Map(dataset.entities.map((entity) => [entity.id, entity])),
     [dataset.entities],
   );
-  const regionVisibleIds = new Set(regionScopedEntities.map((entity) => entity.id));
-  const eligibleEdges = dataset.edges.filter((edge) => {
-    const modeHit = !edge.viewModes || edge.viewModes.includes(viewMode);
-    return modeHit && regionVisibleIds.has(edge.sourceEntityId) && regionVisibleIds.has(edge.targetEntityId);
-  });
+  const regionVisibleIds = useMemo(
+    () => new Set(regionScopedEntities.map((entity) => entity.id)),
+    [regionScopedEntities],
+  );
+  const eligibleEdges = useMemo(
+    () =>
+      dataset.edges.filter((edge) => {
+        const modeHit = !edge.viewModes || edge.viewModes.includes(viewMode);
+        return modeHit && regionVisibleIds.has(edge.sourceEntityId) && regionVisibleIds.has(edge.targetEntityId);
+      }),
+    [dataset.edges, regionVisibleIds, viewMode],
+  );
   const selectedEdges = eligibleEdges.filter(
     (edge) => edge.sourceEntityId === selectedId || edge.targetEntityId === selectedId,
   );
@@ -334,41 +409,59 @@ export function GraphExplorer({ locale, dataset, articles, initialRegion = "all"
     return pool.filter((entity) => entity.elementClass === activeClass);
   }, [activeClass, networkCenterId, regionScopedEntities]);
 
-  const focusLimits: Record<GraphElementClass, number> = {
-    subject: 2,
-    goal: 2,
-    content: 4,
-    activity: 4,
-    evaluation: 2,
-  };
-  const expandedLimits: Record<GraphElementClass, number> = {
-    subject: 6,
-    goal: 4,
-    content: 8,
-    activity: 8,
-    evaluation: 4,
-  };
+  const directNeighborIds = useMemo(() => {
+    const ids = new Set<string>();
+    eligibleEdges.forEach((edge) => {
+      if (edge.sourceEntityId === networkCenterId) {
+        ids.add(edge.targetEntityId);
+      }
+      if (edge.targetEntityId === networkCenterId) {
+        ids.add(edge.sourceEntityId);
+      }
+    });
+    return ids;
+  }, [eligibleEdges, networkCenterId]);
+
+  const expandedNeighborIds = useMemo(() => {
+    const ids = new Set<string>(directNeighborIds);
+    if (!showAllEdges) {
+      return ids;
+    }
+
+    eligibleEdges.forEach((edge) => {
+      if (directNeighborIds.has(edge.sourceEntityId)) {
+        ids.add(edge.targetEntityId);
+      }
+      if (directNeighborIds.has(edge.targetEntityId)) {
+        ids.add(edge.sourceEntityId);
+      }
+    });
+    ids.delete(networkCenterId);
+    return ids;
+  }, [directNeighborIds, eligibleEdges, networkCenterId, showAllEdges]);
 
   const networkEntities = useMemo(() => {
-    const addByLimit = (pool: GraphDataset["entities"], limit: number) =>
-      [...pool]
-        .sort((left, right) => rankEntityForRegion(right) - rankEntityForRegion(left) || left.name.localeCompare(right.name, "zh-CN"))
-        .slice(0, limit);
+    const sortPool = (pool: GraphDataset["entities"]) =>
+      [...pool].sort(
+        (left, right) =>
+          rankEntityForRegion(right) - rankEntityForRegion(left) || left.name.localeCompare(right.name, "zh-CN"),
+      );
 
     const selected: GraphDataset["entities"] = [];
     if (networkCenterEntity) {
       selected.push(networkCenterEntity);
     }
 
+    const reachableIds = showAllEdges ? expandedNeighborIds : directNeighborIds;
+    const reachablePool = baseNetworkPool.filter((entity) => reachableIds.has(entity.id));
+
     if (activeClass === "all") {
       elementOrder.forEach((elementClass) => {
-        const limit = showAllEdges ? expandedLimits[elementClass] : focusLimits[elementClass];
-        const pool = baseNetworkPool.filter((entity) => entity.elementClass === elementClass);
-        selected.push(...addByLimit(pool, limit));
+        const pool = reachablePool.filter((entity) => entity.elementClass === elementClass);
+        selected.push(...sortPool(pool));
       });
     } else {
-      const limit = showAllEdges ? expandedLimits[activeClass] : focusLimits[activeClass];
-      selected.push(...addByLimit(baseNetworkPool, limit));
+      selected.push(...sortPool(reachablePool));
     }
 
     const seen = new Set<string>();
@@ -379,49 +472,34 @@ export function GraphExplorer({ locale, dataset, articles, initialRegion = "all"
       seen.add(entity.id);
       return true;
     });
-  }, [activeClass, baseNetworkPool, networkCenterEntity, showAllEdges]);
+  }, [activeClass, baseNetworkPool, directNeighborIds, expandedNeighborIds, networkCenterEntity, showAllEdges]);
 
-  const activeNodeIds = new Set(networkEntities.map((entity) => entity.id));
+  const activeNodeIds = useMemo(
+    () => new Set(networkEntities.map((entity) => entity.id)),
+    [networkEntities],
+  );
   const displayedEdges = useMemo(() => {
     if (!networkCenterEntity) {
       return [];
     }
 
-    const starEdges = networkEntities
-      .filter((entity) => entity.id !== networkCenterId)
-      .map((entity) => ({
-        sourceEntityId: networkCenterId,
-        targetEntityId: entity.id,
-        relationType: "related" as GraphRelationType,
-      }));
-
-    if (!showAllEdges) {
-      return starEdges;
-    }
-
-    const extraEdges = eligibleEdges.filter((edge) => {
+    return eligibleEdges.filter((edge) => {
       const visible = activeNodeIds.has(edge.sourceEntityId) && activeNodeIds.has(edge.targetEntityId);
       if (!visible) {
         return false;
       }
-      if (edge.sourceEntityId === networkCenterId || edge.targetEntityId === networkCenterId) {
-        return false;
+      if (showAllEdges) {
+        return true;
       }
-      return true;
+      return edge.sourceEntityId === networkCenterId || edge.targetEntityId === networkCenterId;
     });
-
-    return [
-      ...starEdges,
-      ...extraEdges,
-    ];
   }, [activeNodeIds, eligibleEdges, networkCenterEntity, networkCenterId, networkEntities, showAllEdges]);
 
   const canExpandNetwork = useMemo(() => {
-    const fullCount = activeClass === "all"
-      ? baseNetworkPool.length + (networkCenterEntity ? 1 : 0)
-      : baseNetworkPool.length + (networkCenterEntity ? 1 : 0);
-    return fullCount > networkEntities.length;
-  }, [activeClass, baseNetworkPool.length, networkCenterEntity, networkEntities.length]);
+    const reachableIds = expandedNeighborIds;
+    const reachablePool = baseNetworkPool.filter((entity) => reachableIds.has(entity.id));
+    return reachablePool.length + (networkCenterEntity ? 1 : 0) > networkEntities.length;
+  }, [baseNetworkPool, expandedNeighborIds, networkCenterEntity, networkEntities.length]);
   const highlightedIds = new Set<string>([selectedId]);
   displayedEdges.forEach((edge) => {
     highlightedIds.add(edge.sourceEntityId);
@@ -463,9 +541,10 @@ export function GraphExplorer({ locale, dataset, articles, initialRegion = "all"
         publishedAt: article.publishedAt,
       }));
     return dedupeEvidence([
+      ...(selectedEntity.sourceRefs ?? []),
       ...selectedEdges.flatMap((edge) => edge.evidenceRefs ?? []),
       ...articleRefs,
-    ]).slice(0, 10);
+    ]).slice(0, 12);
   }, [articles, selectedEdges, selectedEntity]);
 
   const groupedRelations = useMemo(() => {
@@ -483,7 +562,7 @@ export function GraphExplorer({ locale, dataset, articles, initialRegion = "all"
             }
             return {
               target,
-              label: relationLabels[locale][edge.relationType],
+              label: runtimeRelationLabels[locale][edge.relationType],
               edge,
             };
           })
@@ -494,37 +573,7 @@ export function GraphExplorer({ locale, dataset, articles, initialRegion = "all"
       .filter((group) => group.items.length > 0);
   }, [dataset, entityMap, locale, selectedEdges, selectedEntity]);
 
-  const labels = locale === "zh"
-    ? {
-        nodeCount: "个节点",
-        edgeCount: "条关系",
-        linkedArticles: "相关文章",
-        directRelations: "直接关系",
-        allEvidence: "证据与依据",
-        emptyColumn: "当前筛选下暂无节点",
-        scoreLabels: {
-          factorSupport: "要素保障",
-          carrierCapacity: "技术承载",
-          collaborationLevel: "协同水平",
-          applicationOutput: "应用成效",
-          comprehensiveBenefit: "综合效益",
-        },
-      }
-    : {
-        nodeCount: "nodes",
-        edgeCount: "relations",
-        linkedArticles: "linked articles",
-        directRelations: "direct relations",
-        allEvidence: "Evidence and notes",
-        emptyColumn: "No nodes in this column",
-        scoreLabels: {
-          factorSupport: "Factor support",
-          carrierCapacity: "Carrier capacity",
-          collaborationLevel: "Collaboration",
-          applicationOutput: "Application output",
-          comprehensiveBenefit: "Benefit",
-        },
-      };
+  const labels = runtimeUiLabels[locale];
 
   return (
     <div className="kg-page">
@@ -743,7 +792,7 @@ export function GraphExplorer({ locale, dataset, articles, initialRegion = "all"
                     <strong>{group.label}</strong>
                     <div className="relation-list relation-list--light">
                       {group.items.map((item) => (
-                        <div key={`${item.edge.sourceEntityId}-${item.edge.targetEntityId}`} className="relation-item relation-item--light">
+                        <div key={`${item.edge.sourceEntityId}-${item.edge.targetEntityId}-${item.edge.relationType}`} className="relation-item relation-item--light">
                           <strong>{item.target.name}</strong>
                           <span>{item.label}</span>
                         </div>

@@ -18,15 +18,6 @@
     "relatedArticleIds": []
   },
   {
-    "id": "beibu-gulf",
-    "name": "北部湾",
-    "type": "region",
-    "aliases": ["广西北部湾"],
-    "intro": "北部湾是广西海洋地理信息、港航调度与海岸带监测应用的重点区域。",
-    "region": "广西",
-    "relatedArticleIds": []
-  },
-  {
     "id": "gx-gov-org",
     "name": "广西壮族自治区人民政府",
     "type": "institution",

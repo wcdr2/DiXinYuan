@@ -43,8 +43,8 @@ export function MapPreview({ locale, dataset }: MapPreviewProps) {
             <span>{locale === "zh" ? "设区市" : "Cities"}</span>
           </div>
           <div>
-            <strong>{dataset.metrics.specialRegionCount}</strong>
-            <span>{locale === "zh" ? "专题区域" : "Special region"}</span>
+            <strong>{dataset.metrics.priorityRegionCount}</strong>
+            <span>{locale === "zh" ? "重点城市" : "Priority cities"}</span>
           </div>
         </div>
       </div>

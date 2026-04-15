@@ -3,6 +3,15 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { graphResearchBase } from "../datasets/seed/graph-research-base.mjs";
+import {
+  beibuGulfTheme,
+  guangxiCityProfiles,
+  guangxiProvince,
+  guangxiRegionLabelById,
+  guangxiRegionNameToId,
+  guangxiRegionScopes,
+  guangxiRegionSearchTerms,
+} from "../datasets/seed/guangxi-regions-base.mjs";
 import { guangxiMapBase } from "../datasets/seed/map-region-base.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,8 +87,9 @@ const categoryHints = {
   enterprise: ["企业", "产业园", "platform", "enterprise", "industry", "供给"],
   technology: ["技术", "遥感", "digital twin", "GeoAI", "智能测绘", "空间智能"],
 };
-
-const guangxiTokens = ["广西", "南宁", "北部湾", "桂林", "柳州", "防城港", "北海"];
+const guangxiRegionIdSet = new Set(guangxiRegionScopes.map((scope) => scope.id));
+const guangxiRegionEntries = Object.entries(guangxiRegionNameToId).sort((left, right) => right[0].length - left[0].length);
+const beibuThemeTerms = [beibuGulfTheme.labelZh, ...(beibuGulfTheme.aliases ?? [])];
 
 const coverThemes = [
   "teal-grid",
@@ -176,34 +186,6 @@ const mapModeColors = {
   technology: ["#26485e", "#3d8d96", "#5fcdbf", "#96efd9"],
   policy: ["#3f3a2e", "#8a7751", "#c6ae70", "#ecd79d"],
 };
-
-const industryChainBlueprint = [
-  { sourceEntityId: "remote-sensing", targetEntityId: "real-scene-3d", relationType: "supports", keywords: ["遥感", "卫星", "实景三维"] },
-  { sourceEntityId: "real-scene-3d", targetEntityId: "gis-platform", relationType: "supports", keywords: ["实景三维", "时空底座", "平台"] },
-  { sourceEntityId: "gis-platform", targetEntityId: "digital-twin", relationType: "supports", keywords: ["地理信息平台", "数字孪生", "时空平台"] },
-  { sourceEntityId: "geo-ai", targetEntityId: "digital-twin", relationType: "supports", keywords: ["GeoAI", "空间智能", "数字孪生"] },
-  { sourceEntityId: "beidou-application", targetEntityId: "low-altitude-economy", relationType: "supports", keywords: ["北斗", "低空经济", "高精度定位"] },
-  { sourceEntityId: "beidou-application", targetEntityId: "gx-beidou-park", relationType: "supports", keywords: ["北斗产业园", "北斗", "时空服务"] },
-  { sourceEntityId: "marine-service-scenarios", targetEntityId: "beibu-gulf", relationType: "located_in", keywords: ["北部湾", "海洋地理信息", "港航调度"] },
-  { sourceEntityId: "marine-service-scenarios", targetEntityId: "gis-platform", relationType: "supports", keywords: ["海洋地理信息服务", "服务平台", "平台"] },
-  { sourceEntityId: "gx-industry-policy", targetEntityId: "gx-gov-org", relationType: "guides", keywords: ["产业发展政策", "服务能力提升行动", "政策"] },
-  { sourceEntityId: "gx-industry-policy", targetEntityId: "gx-dnr-org", relationType: "guides", keywords: ["自然资源", "服务能力提升行动", "政策"] },
-  { sourceEntityId: "gx-industry-policy", targetEntityId: "gx-beidou-park", relationType: "guides", keywords: ["北斗产业园", "产业园", "政策"] },
-  { sourceEntityId: "gx-gov-org", targetEntityId: "guangxi", relationType: "located_in", keywords: ["广西"] },
-  { sourceEntityId: "gx-dnr-org", targetEntityId: "guangxi", relationType: "located_in", keywords: ["广西", "自然资源厅"] },
-  { sourceEntityId: "gx-beidou-park", targetEntityId: "guangxi", relationType: "located_in", keywords: ["广西", "北斗产业园"] },
-  { sourceEntityId: "natural-resource-governance", targetEntityId: "guangxi", relationType: "supports", keywords: ["自然资源", "国土空间", "广西"] },
-  { sourceEntityId: "gx-dnr-org", targetEntityId: "natural-resource-governance", relationType: "supports", keywords: ["自然资源", "国土空间", "项目用地"] },
-  { sourceEntityId: "aircas-org", targetEntityId: "remote-sensing", relationType: "supports", keywords: ["空天信息", "遥感", "卫星"] },
-  { sourceEntityId: "whu-org", targetEntityId: "geo-ai", relationType: "supports", keywords: ["空间智能", "智能测绘", "遥感"] },
-  { sourceEntityId: "supermap-org", targetEntityId: "gis-platform", relationType: "drives", keywords: ["GIS", "平台", "GeoAI"] },
-  { sourceEntityId: "supermap-org", targetEntityId: "digital-twin", relationType: "drives", keywords: ["digital twin", "数字孪生", "GeoAI"] },
-  { sourceEntityId: "cagis-org", targetEntityId: "guangxi-enterprise-cluster", relationType: "drives", keywords: ["产业", "企业", "地理信息企业"] },
-  { sourceEntityId: "csgpc-org", targetEntityId: "geo-ai", relationType: "supports", keywords: ["智能测绘", "时空信息", "空间智能"] },
-  { sourceEntityId: "guangxi-enterprise-cluster", targetEntityId: "gx-beidou-park", relationType: "related", keywords: ["产业园", "企业", "时空服务"] },
-  { sourceEntityId: "guangxi-enterprise-cluster", targetEntityId: "digital-twin", relationType: "drives", keywords: ["企业", "数字孪生", "平台"] },
-  { sourceEntityId: "low-altitude-economy", targetEntityId: "guangxi", relationType: "located_in", keywords: ["低空经济", "广西"] },
-];
 
 async function readJson(filePath) {
   const content = await readFile(filePath, "utf8");
@@ -427,12 +409,85 @@ function detectGuangxi(article) {
     return article.isGuangxiRelated;
   }
 
-  const text = `${article.title} ${article.summary} ${(article.regionTags ?? []).join(" ")}`;
-  return guangxiTokens.some((token) => text.includes(token));
+  const rawTags = article.regionTags ?? [];
+  if (rawTags.some((tag) => guangxiRegionNameToId[tag])) {
+    return true;
+  }
+  if (rawTags.some((tag) => beibuThemeTerms.includes(tag))) {
+    return true;
+  }
+
+  const text = articleTextForMatching(article);
+  return guangxiRegionSearchTerms.some((term) => text.includes(term));
 }
 
 function articleTextForMatching(article) {
   return `${article.title} ${article.summary} ${(article.keywords ?? []).join(" ")} ${article.sourceName ?? ""} ${(article.regionTags ?? []).join(" ")}`;
+}
+
+function collectMentionedRegionIds(text) {
+  const matched = new Set();
+  const normalized = String(text ?? "");
+
+  guangxiRegionEntries.forEach(([term, regionId]) => {
+    if (term && normalized.includes(term)) {
+      matched.add(regionId);
+    }
+  });
+
+  if (beibuThemeTerms.some((term) => term && normalized.includes(term))) {
+    beibuGulfTheme.memberCityIds.forEach((cityId) => matched.add(cityId));
+  }
+
+  return matched;
+}
+
+function resolveArticleRegionIds(article, entityLookup = new Map()) {
+  const matched = new Set();
+  const rawTags = article.regionTags ?? [];
+
+  rawTags.forEach((tag) => {
+    const regionId = guangxiRegionNameToId[tag];
+    if (regionId) {
+      matched.add(regionId);
+    }
+  });
+
+  if (rawTags.some((tag) => beibuThemeTerms.includes(tag))) {
+    beibuGulfTheme.memberCityIds.forEach((cityId) => matched.add(cityId));
+  }
+
+  collectMentionedRegionIds(articleTextForMatching(article)).forEach((regionId) => matched.add(regionId));
+
+  (article.entityIds ?? []).forEach((entityId) => {
+    const entity = entityLookup.get(entityId);
+    (entity?.regionIds ?? []).forEach((regionId) => {
+      if (guangxiRegionIdSet.has(regionId) && regionId !== guangxiProvince.id) {
+        matched.add(regionId);
+      }
+    });
+  });
+
+  if (matched.size > 0) {
+    matched.add(guangxiProvince.id);
+  } else if (detectGuangxi(article)) {
+    matched.add(guangxiProvince.id);
+  }
+
+  return matched;
+}
+
+function resolveArticleRegionTags(article, entityLookup = new Map()) {
+  const regionIds = resolveArticleRegionIds(article, entityLookup);
+  if (regionIds.size === 0) {
+    return ["全国"];
+  }
+
+  return unique(
+    [...regionIds]
+      .map((regionId) => guangxiRegionLabelById[regionId])
+      .filter(Boolean),
+  );
 }
 
 function normalizeKeywordTerm(value) {
@@ -643,6 +698,7 @@ function resolveOriginalUrl(article, source) {
 
 function normalizeArticle(article, index, baseEntities, sourceLookup) {
   const source = sourceLookup.get(article.sourceName);
+  const entityLookup = new Map(baseEntities.map((entity) => [entity.id, entity]));
   const normalizedTitle = cleanTitle(article.title, source?.name ?? article.sourceName ?? "");
   if (!normalizedTitle) {
     return null;
@@ -661,7 +717,7 @@ function normalizeArticle(article, index, baseEntities, sourceLookup) {
 
   const keywords = unique(extractKeywordCandidates(normalizedArticle, baseEntities));
   const entityIds = unique(resolveEntities(normalizedArticle, baseEntities));
-  const regionTags = unique(normalizedArticle.regionTags ?? (detectGuangxi(normalizedArticle) ? ["\u5E7F\u897F"] : ["\u5168\u56FD"]));
+  const regionTags = resolveArticleRegionTags({ ...normalizedArticle, entityIds }, entityLookup);
   const category = classifyArticle(normalizedArticle);
 
   return {
@@ -678,7 +734,7 @@ function normalizeArticle(article, index, baseEntities, sourceLookup) {
     category,
     keywords,
     regionTags,
-    isGuangxiRelated: detectGuangxi(normalizedArticle),
+    isGuangxiRelated: regionTags.some((tag) => tag !== "全国"),
     entityIds,
   };
 }
@@ -798,18 +854,7 @@ function collectBlueprintEvidence(articles, sourceEntity, targetEntity, extraTer
 }
 
 function toRegionScopeId(value) {
-  const mapping = {
-    广西: "guangxi",
-    南宁: "nanning",
-    北部湾: "beibu-gulf",
-    柳州: "liuzhou",
-    桂林: "guilin",
-    北海: "beihai",
-    钦州: "qinzhou",
-    防城港: "fangchenggang",
-  };
-
-  return mapping[String(value ?? "").trim()] ?? "";
+  return guangxiRegionNameToId[String(value ?? "").trim()] ?? "";
 }
 
 function inferElementClass(entity) {
@@ -831,6 +876,18 @@ function inferElementClass(entity) {
   return mapping[entity.type] ?? "content";
 }
 
+function mergeEntityEvidenceRefs(refs) {
+  const seen = new Set();
+  return refs.filter((ref) => {
+    const key = ref.kind === "article" ? `article:${ref.articleId}` : `research:${ref.id ?? ref.title}:${ref.url ?? ""}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
 function mergeBaseEntities(seedEntities, researchEntities) {
   const merged = new Map();
   const applyEntity = (entity, index, isResearch) => {
@@ -839,6 +896,7 @@ function mergeBaseEntities(seedEntities, researchEntities) {
     const mergedAliases = unique([...(current.aliases ?? []), ...(entity.aliases ?? [])]);
     const mergedTags = unique([...(current.tags ?? []), ...(entity.tags ?? [])]);
     const mergedArticleIds = unique([...(current.relatedArticleIds ?? []), ...(entity.relatedArticleIds ?? [])]);
+    const mergedSourceRefs = mergeEntityEvidenceRefs([...(current.sourceRefs ?? []), ...(entity.sourceRefs ?? [])]);
     const mergedRegionIds = unique([
       ...(current.regionIds ?? []),
       ...(entity.regionIds ?? []),
@@ -854,6 +912,7 @@ function mergeBaseEntities(seedEntities, researchEntities) {
       tags: mergedTags,
       regionIds: mergedRegionIds,
       relatedArticleIds: mergedArticleIds,
+      sourceRefs: mergedSourceRefs,
       displayOrder:
         entity.displayOrder ??
         current.displayOrder ??
@@ -861,8 +920,8 @@ function mergeBaseEntities(seedEntities, researchEntities) {
     });
   };
 
-  researchEntities.forEach((entity, index) => applyEntity(entity, index, true));
   seedEntities.forEach((entity, index) => applyEntity(entity, index, false));
+  researchEntities.forEach((entity, index) => applyEntity(entity, index, true));
   return [...merged.values()];
 }
 
@@ -1118,7 +1177,8 @@ function collectRegionKeywords(articles, blockedTerms) {
 
 function inferArticleMapRegionIds(article, cityRegions, entityLookup) {
   const text = articleTextForMatching(article);
-  const matched = new Set();
+  const matched = resolveArticleRegionIds(article, entityLookup);
+  matched.delete(guangxiProvince.id);
 
   cityRegions.forEach((region) => {
     const terms = unique([region.name, ...(region.aliases ?? []), ...(region.matchTerms ?? [])]);
@@ -1133,34 +1193,21 @@ function inferArticleMapRegionIds(article, cityRegions, entityLookup) {
     }
   });
 
-  const beibuRegion = guangxiMapBase.regions.find((region) => region.id === "beibu-gulf");
-  const beibuTerms = unique([
-    beibuRegion?.name,
-    ...(beibuRegion?.aliases ?? []),
-    ...(beibuRegion?.matchTerms ?? []),
-  ]);
-  const beibuMention = beibuTerms.some((term) => term && text.includes(term));
-  const beibuMemberHit = (beibuRegion?.memberRegionIds ?? []).some((regionId) => matched.has(regionId));
-  if (beibuMention || beibuMemberHit) {
-    matched.add("beibu-gulf");
-  }
-
   return matched;
 }
 
 function buildMapDataset(articles, graph) {
   const entityLookup = new Map(graph.entities.map((entity) => [entity.id, entity]));
-  const cityRegions = guangxiMapBase.regions.filter((region) => region.type === "city");
+  const cityRegions = guangxiMapBase.regions;
   const articleRegionLookup = new Map(
     articles.map((article) => [article.id, inferArticleMapRegionIds(article, cityRegions, entityLookup)]),
   );
 
   const regions = guangxiMapBase.regions.map((region) => {
-    const scopedRegionIds = new Set([region.id, ...(region.memberRegionIds ?? [])]);
     const matchingArticles = [...articles]
       .filter((article) => {
         const matched = articleRegionLookup.get(article.id) ?? new Set();
-        return [...scopedRegionIds].some((regionId) => matched.has(regionId));
+        return matched.has(region.id);
       })
       .sort((left, right) => right.publishedAt.localeCompare(left.publishedAt));
 
@@ -1172,7 +1219,7 @@ function buildMapDataset(articles, graph) {
     };
 
     const graphEntityIds = graph.entities
-      .filter((entity) => (entity.regionIds ?? []).some((regionId) => scopedRegionIds.has(regionId)))
+      .filter((entity) => (entity.regionIds ?? []).includes(region.id))
       .map((entity) => entity.id);
 
     const entityIds = unique([...graphEntityIds, ...matchingArticles.flatMap((article) => article.entityIds ?? [])]);
@@ -1188,7 +1235,6 @@ function buildMapDataset(articles, graph) {
         region.nameEn,
         ...(region.aliases ?? []),
         ...(region.matchTerms ?? []),
-        ...(region.memberRegionIds ?? []),
       ]).map((value) => String(value).toLowerCase()),
     );
 
@@ -1212,7 +1258,6 @@ function buildMapDataset(articles, graph) {
       subjectEntityCount,
       isPriorityRegion: Boolean(region.isPriorityRegion),
       graphRegionId: region.graphRegionId || undefined,
-      memberRegionIds: region.memberRegionIds ?? undefined,
     };
   });
 
@@ -1231,8 +1276,7 @@ function buildMapDataset(articles, graph) {
     regions,
     metrics: {
       regionCount: regions.length,
-      cityCount: regions.filter((region) => region.type === "city").length,
-      specialRegionCount: regions.filter((region) => region.type === "special-region").length,
+      cityCount: regions.length,
       priorityRegionCount: regions.filter((region) => region.isPriorityRegion).length,
       totalArticles: articles.length,
       totalGraphEntities: graph.entities.length,
@@ -1431,7 +1475,7 @@ function isRelevantArticle(source, title, summary) {
   const domainHit = [...(source.crawlRule.whitelist ?? []), ...domainPhrases].some((keyword) =>
     text.includes(keyword.toLowerCase()),
   );
-  const guangxiHit = guangxiTokens.some((keyword) => text.includes(keyword.toLowerCase()));
+  const guangxiHit = guangxiRegionSearchTerms.some((keyword) => text.includes(keyword.toLowerCase()));
 
   if (source.id === "ogc") {
     return domainHit || /geospatial|ogc|standard|api|interoperability|integration/i.test(text);
