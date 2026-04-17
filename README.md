@@ -6,6 +6,7 @@
 - 词云分析页
 - 广西专题知识图谱页
 - 百度真实地图专题页
+- 全站 AI 站内问答浮窗
 - 白名单来源说明页
 - 实时抓取优先的数据刷新脚本
 
@@ -86,12 +87,62 @@ npm run dev
 yourdomain.com,www.yourdomain.com
 ```
 
+## AI 站内问答配置
+
+如果你想启用右下角 `AI` 按钮的真实聊天能力，请继续在 `.env.local` 中填写 DeepSeek 服务配置。
+
+### 第一步：补充 DeepSeek 环境变量
+
+```bash
+DEEPSEEK_API_KEY=你的DeepSeek密钥
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+说明：
+- `DEEPSEEK_API_KEY`：必填，服务端调用 DeepSeek 的密钥。
+- `DEEPSEEK_BASE_URL`：可选，默认是 `https://api.deepseek.com`；如果你使用兼容 `/v1` 的代理网关，也可以填写带 `/v1` 的地址。
+- `DEEPSEEK_MODEL`：可选，默认是 `deepseek-chat`；也可以改为 `deepseek-reasoner`。
+- AI 接口统一通过服务端 `POST /api/ai-chat` 代理调用，前端不会直接暴露模型密钥。
+
+### 第二步：启动项目并联调
+
+```bash
+npm install
+npm run data:refresh
+npm run dev
+```
+
+启动后可直接访问：
+- `http://localhost:3000/zh`
+- `http://localhost:3000/en`
+
+然后点击页面右下角的 `AI` 按钮进行联调。
+
+### 当前 AI 功能说明
+
+- AI 助手是全站级浮窗组件，挂载在 `SiteShell`，首页、新闻、地图、知识图谱、来源说明等页面都可直接打开。
+- 问答只围绕本站新闻、词云、专题地图、知识图谱、来源说明和项目介绍，不承担开放域百科问答。
+- 服务端会结合当前页面、筛选参数、最近对话以及站内结构化数据拼装上下文，再调用 DeepSeek 生成回答。
+- 回答会尽量附带站内入口，方便继续跳转阅读对应页面。
+- 同语言站内跳转时会保留当前会话；刷新页面或切换语言后会清空。
+- 如果未配置 `DEEPSEEK_API_KEY`，项目仍可启动，但聊天窗口会提示 AI 服务尚未配置。
+
+### 推荐联调问题
+
+- `广西近期有哪些企业动态？`
+- `专题地图里哪些城市更值得关注？`
+- `知识图谱里最近关联较多的主体有哪些？`
+- `本站的数据来源主要有哪些？`
+
 ## 常用命令
 
 ```bash
 npm run data:refresh
 npm run typecheck
+npm run build:app
 npm run build
+npm run validate
 ```
 
 ## 数据目录
@@ -106,4 +157,4 @@ npm run build
 - OGC 使用官方 `wp-json` 接口，其他来源主要使用栏目页 + 详情页抽取方式。
 
 ## 说明
-当前仓库同时保留了演示种子数据和实时抓取能力，目的是保证你在有网时能得到真实新闻，在无网或来源异常时项目仍然可以正常启动、构建和演示。
+当前仓库同时保留了演示种子数据、实时抓取能力和 AI 站内问答能力，目的是保证你在有网时能得到真实新闻与站内问答结果，在无网或来源异常时项目仍然可以正常启动、构建和演示。AI 首版不做数据库持久化、不做向量库、不做站外联网搜索，只围绕本站结构化内容生成回答。

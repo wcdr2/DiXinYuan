@@ -1,8 +1,9 @@
-﻿import Link from "next/link";
+import Link from "next/link";
+import { AIChatWidget } from "@/components/ai-chat-widget";
 import { getDictionary, withLocale } from "@/lib/site";
 import type { Locale } from "@/lib/types";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 interface SiteShellProps {
   locale: Locale;
@@ -81,6 +82,9 @@ export function SiteShell({ locale, children }: SiteShellProps) {
           </div>
         </div>
       </footer>
+      <Suspense fallback={null}>
+        <AIChatWidget key={locale} locale={locale} />
+      </Suspense>
     </div>
   );
 }
