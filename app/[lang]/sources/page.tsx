@@ -1,8 +1,9 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatDate, getLatestArticleForSource, getLogs, getSources, isLocale } from "@/lib/data";
+import { getRuntimeArticles, getRuntimeLogs, getRuntimeSources } from "@/lib/backend-data";
+import { formatDate, isLocale } from "@/lib/data";
 import { getArticleHref, getDictionary, sourceTypeLabels } from "@/lib/site";
-import type { Source } from "@/lib/types";
+import type { Article, Source } from "@/lib/types";
 
 interface SourcesPageProps {
   params: Promise<{ lang: string }>;
@@ -18,6 +19,10 @@ function getSourceTarget(source: Source) {
   );
 }
 
+function getLatestArticleForSource(sourceName: string, articles: Article[]) {
+  return articles.find((article) => article.sourceName === sourceName);
+}
+
 export default async function SourcesPage({ params }: SourcesPageProps) {
   const { lang } = await params;
 
@@ -26,8 +31,11 @@ export default async function SourcesPage({ params }: SourcesPageProps) {
   }
 
   const dict = getDictionary(lang);
-  const sources = getSources();
-  const logs = getLogs();
+  const [sources, logs, articles] = await Promise.all([
+    getRuntimeSources(),
+    getRuntimeLogs(),
+    getRuntimeArticles(),
+  ]);
   const labels =
     lang === "zh"
       ? {
@@ -69,7 +77,7 @@ export default async function SourcesPage({ params }: SourcesPageProps) {
         <div className="source-grid">
           {sources.map((source) => {
             const targetUrl = getSourceTarget(source);
-            const latestArticle = getLatestArticleForSource(source.name);
+            const latestArticle = getLatestArticleForSource(source.name, articles);
 
             return (
               <article key={source.id} className="card-panel source-card card-panel--soft">

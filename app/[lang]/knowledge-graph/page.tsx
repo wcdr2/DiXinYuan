@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { GraphExplorer } from "@/components/graph-explorer";
-import { getArticles, getGraphDataset, isLocale } from "@/lib/data";
+import { getRuntimeArticles, getRuntimeGraphDataset } from "@/lib/backend-data";
+import { isLocale } from "@/lib/data";
 import { getDictionary } from "@/lib/site";
 
 interface GraphPageProps {
@@ -20,8 +21,7 @@ export default async function GraphPage({ params, searchParams }: GraphPageProps
   }
 
   const dict = getDictionary(lang);
-  const graph = getGraphDataset();
-  const articles = getArticles();
+  const [graph, articles] = await Promise.all([getRuntimeGraphDataset(), getRuntimeArticles()]);
   const regionScopes = graph.regionScopes ?? [];
   const elementClasses = graph.taxonomy?.elementClasses ?? [];
   const initialRegion = firstValue(rawSearchParams.region) ?? "all";

@@ -1,0 +1,50 @@
+ALTER TABLE crawl_runs
+  ADD COLUMN window_start_at DATETIME(3) NULL AFTER started_at,
+  ADD COLUMN window_end_at DATETIME(3) NULL AFTER window_start_at,
+  ADD COLUMN triggered_by VARCHAR(40) NOT NULL DEFAULT 'system' AFTER run_type,
+  ADD COLUMN coverage_status VARCHAR(40) NOT NULL DEFAULT 'unknown' AFTER status,
+  ADD COLUMN accepted_count INT NOT NULL DEFAULT 0 AFTER coverage_status,
+  ADD COLUMN rejected_count INT NOT NULL DEFAULT 0 AFTER accepted_count,
+  ADD KEY idx_crawl_runs_window (window_start_at, window_end_at);
+
+ALTER TABLE crawl_run_sources
+  ADD COLUMN window_start_at DATETIME(3) NULL AFTER source_id,
+  ADD COLUMN window_end_at DATETIME(3) NULL AFTER window_start_at,
+  ADD COLUMN candidate_count INT NOT NULL DEFAULT 0 AFTER fetched_count,
+  ADD COLUMN accepted_count INT NOT NULL DEFAULT 0 AFTER candidate_count,
+  ADD COLUMN rejected_count INT NOT NULL DEFAULT 0 AFTER accepted_count,
+  ADD COLUMN earliest_published_at DATETIME(3) NULL AFTER duplicate_count,
+  ADD COLUMN latest_published_at DATETIME(3) NULL AFTER earliest_published_at,
+  ADD COLUMN coverage_status VARCHAR(40) NOT NULL DEFAULT 'unknown' AFTER latest_published_at;
+
+CREATE TABLE news_candidates (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  crawl_run_id BIGINT NOT NULL,
+  source_id BIGINT NOT NULL,
+  source_code VARCHAR(80) NOT NULL,
+  original_url VARCHAR(1024) NOT NULL,
+  canonical_url VARCHAR(1024) NOT NULL,
+  raw_title VARCHAR(1024) NULL,
+  raw_summary TEXT NULL,
+  cleaned_title VARCHAR(1024) NULL,
+  cleaned_summary TEXT NULL,
+  published_at DATETIME(3) NULL,
+  language VARCHAR(20) NOT NULL,
+  category VARCHAR(40) NULL,
+  keywords_json JSON NOT NULL,
+  region_tags_json JSON NOT NULL,
+  is_guangxi_related TINYINT(1) NOT NULL DEFAULT 0,
+  review_status VARCHAR(30) NOT NULL,
+  reject_reason TEXT NULL,
+  content_hash VARCHAR(64) NULL,
+  raw_payload_json JSON NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_news_candidates_run_id (crawl_run_id),
+  KEY idx_news_candidates_source_id (source_id),
+  KEY idx_news_candidates_status (review_status),
+  KEY idx_news_candidates_published_at (published_at),
+  KEY idx_news_candidates_url (source_id, canonical_url(512)),
+  CONSTRAINT fk_news_candidates_run FOREIGN KEY (crawl_run_id) REFERENCES crawl_runs (id),
+  CONSTRAINT fk_news_candidates_source FOREIGN KEY (source_id) REFERENCES sources (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

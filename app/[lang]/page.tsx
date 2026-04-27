@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { MapPreview } from "@/components/map-preview";
 import { WordCloud } from "@/components/word-cloud";
 import {
+  getRuntimeArticles,
+  getRuntimeGraphDataset,
+  getRuntimeMapDataset,
+  getRuntimeSources,
+  getRuntimeWordCloudItems,
+} from "@/lib/backend-data";
+import {
   formatDate,
-  getArticles,
-  getFeaturedArticles,
-  getGraphDataset,
-  getLatestByCategory,
-  getMapDataset,
-  getSources,
-  getWordCloudItems,
   isLocale,
 } from "@/lib/data";
 import {
@@ -50,15 +50,19 @@ export default async function HomePage({ params }: HomePageProps) {
   }
 
   const dict = getDictionary(lang);
-  const articles = getArticles();
-  const featured = getFeaturedArticles();
-  const graph = getGraphDataset();
-  const mapDataset = getMapDataset();
-  const wordCloud = getWordCloudItems("all").slice(0, 14);
-  const highlightedSources = getSources().slice(0, 6);
+  const [articles, graph, mapDataset, wordCloudItems, sources] = await Promise.all([
+    getRuntimeArticles(),
+    getRuntimeGraphDataset(),
+    getRuntimeMapDataset(),
+    getRuntimeWordCloudItems("all"),
+    getRuntimeSources(),
+  ]);
+  const featured = articles.slice(0, 3);
+  const wordCloud = wordCloudItems.slice(0, 14);
+  const highlightedSources = sources.slice(0, 6);
   const latestByCategory = categoryOrder.map((category) => ({
     category,
-    items: getLatestByCategory(category),
+    items: articles.filter((article) => article.category === category).slice(0, 4),
   }));
 
   const leadStory = featured[0];

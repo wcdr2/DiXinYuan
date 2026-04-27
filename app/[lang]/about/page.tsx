@@ -1,5 +1,6 @@
 ﻿import { notFound } from "next/navigation";
-import { getSummaryMetrics, isLocale } from "@/lib/data";
+import { getRuntimeSummaryMetrics } from "@/lib/backend-data";
+import { isLocale } from "@/lib/data";
 import { getDictionary } from "@/lib/site";
 
 interface AboutPageProps {
@@ -14,7 +15,7 @@ export default async function AboutPage({ params }: AboutPageProps) {
   }
 
   const dict = getDictionary(lang);
-  const metrics = getSummaryMetrics();
+  const metrics = await getRuntimeSummaryMetrics();
 
   return (
     <div className="shell page-stack">

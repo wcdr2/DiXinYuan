@@ -1,7 +1,8 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleCard } from "@/components/article-card";
-import { formatDate, getArticleBySlug, getArticles, getRelatedArticles, isLocale } from "@/lib/data";
+import { formatDate, getArticles, isLocale } from "@/lib/data";
+import { getRuntimeArticleBySlug, getRuntimeRelatedArticles } from "@/lib/backend-data";
 import { categoryLabels, getCoverSurface, getDictionary, getSourceAccessUrls, withLocale } from "@/lib/site";
 
 interface NewsDetailProps {
@@ -34,13 +35,13 @@ export default async function NewsDetailPage({ params }: NewsDetailProps) {
     notFound();
   }
 
-  const article = getArticleBySlug(slug);
+  const article = await getRuntimeArticleBySlug(slug);
   if (!article) {
     notFound();
   }
 
   const dict = getDictionary(lang);
-  const related = getRelatedArticles(article);
+  const related = await getRuntimeRelatedArticles(article);
   const cover = getCoverSurface(article.coverImage);
   const sourceAccess = getSourceAccessUrls(article.originalUrl, article.sourceUrl);
   const detailLabels =

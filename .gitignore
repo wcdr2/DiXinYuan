@@ -3,6 +3,7 @@ node_modules
 out
 dist
 coverage
+backend/target
 *.log
 data/generated
 datasets/generated

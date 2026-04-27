@@ -1,7 +1,8 @@
 ﻿import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArticleCard } from "@/components/article-card";
-import { filterArticles, formatDate, getMapDataset, getSources, isLocale } from "@/lib/data";
+import { formatDate, isLocale } from "@/lib/data";
+import { getRuntimeArticles, getRuntimeMapDataset, getRuntimeSources } from "@/lib/backend-data";
 import {
   categoryLabels,
   categoryOrder,
@@ -38,9 +39,12 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
     sort: (firstValue(rawSearchParams.sort) as "latest" | "oldest" | undefined) ?? "latest",
   };
 
-  const articles = filterArticles(filters);
-  const sources = getSources();
-  const regionOptions = getMapDataset().regions;
+  const [articles, sources, mapDataset] = await Promise.all([
+    getRuntimeArticles(filters),
+    getRuntimeSources(),
+    getRuntimeMapDataset(),
+  ]);
+  const regionOptions = mapDataset.regions;
   const leadArticle = articles[0];
   const leadCover = getCoverSurface(leadArticle?.coverImage);
   const leadSourceAccess = leadArticle ? getSourceAccessUrls(leadArticle.originalUrl, leadArticle.sourceUrl) : null;

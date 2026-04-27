@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gx-geo-news-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/gx_geo_news?useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  import-on-startup: ${APP_IMPORT_ON_STARTUP:false}
+  import-root: ${APP_IMPORT_ROOT:../datasets}
+  auto-crawl-on-startup: ${APP_AUTO_CRAWL_ON_STARTUP:true}
+  crawl-first-start: ${APP_CRAWL_FIRST_START:2026-01-01T00:00:00}
+  crawl-overlap-minutes: ${APP_CRAWL_OVERLAP_MINUTES:10}
+  internal-token: ${CRAWL_TRIGGER_TOKEN:local-dev-token}
+  frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}

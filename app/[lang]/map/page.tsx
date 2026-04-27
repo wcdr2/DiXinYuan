@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { MapExplorer } from "@/components/map-explorer";
-import { formatDate, getArticles, getMapDataset, isLocale } from "@/lib/data";
+import { getRuntimeArticles, getRuntimeMapDataset } from "@/lib/backend-data";
+import { formatDate, isLocale } from "@/lib/data";
 import type { MapMode } from "@/lib/types";
 import { getDictionary } from "@/lib/site";
 
@@ -21,8 +22,7 @@ export default async function MapPage({ params, searchParams }: MapPageProps) {
   }
 
   const dict = getDictionary(lang);
-  const dataset = getMapDataset();
-  const articles = getArticles();
+  const [dataset, articles] = await Promise.all([getRuntimeMapDataset(), getRuntimeArticles()]);
   const initialRegionId = firstValue(rawSearchParams.region);
   const rawMode = firstValue(rawSearchParams.mode);
   const initialMode: MapMode =

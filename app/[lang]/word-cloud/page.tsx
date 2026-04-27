@@ -1,6 +1,7 @@
 ﻿import { notFound } from "next/navigation";
 import { WordCloud } from "@/components/word-cloud";
-import { getWordCloudItems, isLocale } from "@/lib/data";
+import { getRuntimeWordCloudItems } from "@/lib/backend-data";
+import { isLocale } from "@/lib/data";
 import { categoryLabels, categoryOrder, getDictionary } from "@/lib/site";
 
 interface WordCloudPageProps {
@@ -15,6 +16,10 @@ export default async function WordCloudPage({ params }: WordCloudPageProps) {
   }
 
   const dict = getDictionary(lang);
+  const [allItems, ...categoryItems] = await Promise.all([
+    getRuntimeWordCloudItems("all"),
+    ...categoryOrder.map((category) => getRuntimeWordCloudItems(category)),
+  ]);
 
   return (
     <div className="shell page-stack">
@@ -26,12 +31,12 @@ export default async function WordCloudPage({ params }: WordCloudPageProps) {
       <section className="cloud-grid">
         <div className="card-panel card-panel--soft">
           <h2>{dict.wordCloud.all}</h2>
-          <WordCloud locale={lang} items={getWordCloudItems("all")} variant="light" />
+          <WordCloud locale={lang} items={allItems} variant="light" />
         </div>
-        {categoryOrder.map((category) => (
+        {categoryOrder.map((category, index) => (
           <div key={category} className="card-panel card-panel--soft">
             <h2>{categoryLabels[lang][category]}</h2>
-            <WordCloud locale={lang} items={getWordCloudItems(category)} variant="light" />
+            <WordCloud locale={lang} items={categoryItems[index]} variant="light" />
           </div>
         ))}
       </section>
