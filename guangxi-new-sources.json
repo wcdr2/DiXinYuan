@@ -1,0 +1,278 @@
+[
+  {
+    "id": "glut-cgg",
+    "name": "桂林理工大学测绘地理信息学院",
+    "type": "university",
+    "siteUrl": "https://cgg.glut.edu.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://cgg.glut.edu.cn/overview.jsp?urltype=tree.TreeTempUrl&wbtreeid=1024",
+      "fallbackEntryUrls": [
+        "https://cgg.glut.edu.cn/overview.jsp?urltype=tree.TreeTempUrl&wbtreeid=1104",
+        "https://cgg.glut.edu.cn/"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "测绘",
+        "地理信息",
+        "GIS",
+        "遥感",
+        "北斗",
+        "导航",
+        "定位",
+        "空间信息",
+        "实景三维",
+        "数字孪生",
+        "时空",
+        "大地测量",
+        "摄影测量",
+        "地图制图",
+        "surveying",
+        "mapping",
+        "geospatial",
+        "remote sensing",
+        "GNSS",
+        "BeiDou"
+      ],
+      "itemLimit": 10,
+      "notes": "桂林理工大学测绘地理信息学院，广西地区重要的测绘教育机构。监测学院动态和学术动态栏目。",
+      "requireKeywordMatch": true
+    }
+  },
+  {
+    "id": "gxu-zyhjcl",
+    "name": "广西大学资源环境与材料学院",
+    "type": "university",
+    "siteUrl": "https://zyhjcl.gxu.edu.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "https://zyhjcl.gxu.edu.cn/",
+      "fallbackEntryUrls": [
+        "https://zyhjcl.gxu.edu.cn/English.htm"
+      ],
+      "parser": "html-list",
+      "whitelist": [
+        "地理信息",
+        "GIS",
+        "遥感",
+        "测绘",
+        "空间信息",
+        "资源环境",
+        "环境监测",
+        "地质",
+        "矿产",
+        "土地资源",
+        "自然资源",
+        "geospatial",
+        "remote sensing",
+        "environmental",
+        "resources"
+      ],
+      "itemLimit": 10,
+      "notes": "广西大学资源环境与材料学院，涉及资源环境和地理信息相关研究。",
+      "requireKeywordMatch": true
+    }
+  },
+  {
+    "id": "nn-dnr",
+    "name": "南宁市自然资源局",
+    "type": "government",
+    "siteUrl": "http://zrzyj.nanning.gov.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "http://zrzyj.nanning.gov.cn/",
+      "fallbackEntryUrls": [],
+      "parser": "html-list",
+      "whitelist": [
+        "自然资源",
+        "测绘",
+        "地理信息",
+        "国土空间",
+        "规划",
+        "用地",
+        "不动产",
+        "地质",
+        "实景三维",
+        "时空信息",
+        "surveying",
+        "mapping",
+        "geospatial"
+      ],
+      "itemLimit": 8,
+      "notes": "南宁市自然资源局，广西首府城市的自然资源管理部门。",
+      "requireKeywordMatch": true
+    }
+  },
+  {
+    "id": "gl-dnr",
+    "name": "桂林市自然资源局",
+    "type": "government",
+    "siteUrl": "http://zrzyj.guilin.gov.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "http://zrzyj.guilin.gov.cn/",
+      "fallbackEntryUrls": [],
+      "parser": "html-list",
+      "whitelist": [
+        "自然资源",
+        "测绘",
+        "地理信息",
+        "国土空间",
+        "规划",
+        "用地",
+        "不动产",
+        "地质",
+        "实景三维",
+        "时空信息",
+        "surveying",
+        "mapping",
+        "geospatial"
+      ],
+      "itemLimit": 8,
+      "notes": "桂林市自然资源局，桂林是广西重要的旅游城市，测绘需求较大。",
+      "requireKeywordMatch": true
+    }
+  },
+  {
+    "id": "gx-survey-association",
+    "name": "广西测绘学会",
+    "type": "association",
+    "siteUrl": "http://www.gxchxh.org.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "http://www.gxchxh.org.cn/",
+      "fallbackEntryUrls": [],
+      "parser": "html-list",
+      "whitelist": [
+        "测绘",
+        "地理信息",
+        "GIS",
+        "遥感",
+        "北斗",
+        "导航",
+        "定位",
+        "空间信息",
+        "实景三维",
+        "数字孪生",
+        "时空",
+        "surveying",
+        "mapping",
+        "geospatial"
+      ],
+      "itemLimit": 10,
+      "notes": "广西测绘学会，广西地区测绘行业的专业学术团体。",
+      "requireKeywordMatch": true
+    }
+  },
+  {
+    "id": "gx-geo-info-center",
+    "name": "广西基础地理信息中心",
+    "type": "research",
+    "siteUrl": "http://www.gxjcdlxxzx.com",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "http://www.gxjcdlxxzx.com/",
+      "fallbackEntryUrls": [],
+      "parser": "html-list",
+      "whitelist": [
+        "地理信息",
+        "测绘",
+        "基础测绘",
+        "地理国情",
+        "实景三维",
+        "时空信息",
+        "地图",
+        "空间数据",
+        "GIS",
+        "遥感",
+        "surveying",
+        "mapping",
+        "geospatial"
+      ],
+      "itemLimit": 10,
+      "notes": "广西基础地理信息中心，负责广西基础地理信息数据建设和管理。",
+      "requireKeywordMatch": true
+    }
+  },
+  {
+    "id": "lz-dnr",
+    "name": "柳州市自然资源和规划局",
+    "type": "government",
+    "siteUrl": "http://zrzyghj.liuzhou.gov.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "http://zrzyghj.liuzhou.gov.cn/",
+      "fallbackEntryUrls": [],
+      "parser": "html-list",
+      "whitelist": [
+        "自然资源",
+        "测绘",
+        "地理信息",
+        "国土空间",
+        "规划",
+        "用地",
+        "实景三维",
+        "时空信息",
+        "surveying",
+        "mapping",
+        "geospatial"
+      ],
+      "itemLimit": 8,
+      "notes": "柳州市自然资源和规划局，柳州是广西重要的工业城市。",
+      "requireKeywordMatch": true
+    }
+  },
+  {
+    "id": "bh-dnr",
+    "name": "北海市自然资源局",
+    "type": "government",
+    "siteUrl": "http://zrzyj.beihai.gov.cn",
+    "language": "zh",
+    "trustLevel": "high",
+    "isActive": true,
+    "crawlRule": {
+      "mode": "homepage-monitor",
+      "entryUrl": "http://zrzyj.beihai.gov.cn/",
+      "fallbackEntryUrls": [],
+      "parser": "html-list",
+      "whitelist": [
+        "自然资源",
+        "测绘",
+        "地理信息",
+        "海洋",
+        "国土空间",
+        "规划",
+        "用地",
+        "实景三维",
+        "surveying",
+        "mapping",
+        "geospatial",
+        "marine"
+      ],
+      "itemLimit": 8,
+      "notes": "北海市自然资源局，北海是广西重要的沿海城市，涉及海洋测绘。",
+      "requireKeywordMatch": true
+    }
+  }
+]

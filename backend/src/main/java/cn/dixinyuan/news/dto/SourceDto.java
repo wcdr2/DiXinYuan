@@ -9,5 +9,6 @@ public record SourceDto(
     String siteUrl,
     String language,
     String trustLevel,
+    String whitelistEntityId,
     Boolean isActive,
     JsonNode crawlRule) {}

@@ -78,14 +78,20 @@ export interface GraphRegionScope {
 }
 
 export interface CrawlRule {
-  mode: "seed" | "seed-or-rss" | "rss" | "homepage-monitor" | "api";
+  mode?: "seed" | "seed-or-rss" | "rss" | "homepage-monitor" | "api";
   entryUrl?: string;
   feedUrls?: string[];
   fallbackEntryUrls?: string[];
-  parser?: "rss" | "html-list" | "wp-json";
+  parser?: "rss" | "atom" | "html-list" | "wp-json" | "sitemap";
   apiUrl?: string;
   whitelist?: string[];
   itemLimit?: number;
+  maxPages?: number;
+  maxSitemaps?: number;
+  paginationTemplate?: string;
+  linkAllowPatterns?: string[];
+  linkDenyPatterns?: string[];
+  requireKeywordMatch?: boolean;
   notes?: string;
 }
 
@@ -107,6 +113,16 @@ export interface Article {
   entityIds: string[];
 }
 
+export interface ArticlePage {
+  content: Article[];
+  page: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+}
+
 export interface Source {
   id: string;
   name: string;
@@ -114,6 +130,7 @@ export interface Source {
   siteUrl: string;
   language: "zh" | "en" | "mixed";
   trustLevel: TrustLevel;
+  whitelistEntityId?: string;
   isActive: boolean;
   crawlRule: CrawlRule;
 }
@@ -143,6 +160,8 @@ export interface Entity {
   sourceRefs?: EvidenceRef[];
   scorecard?: Scorecard;
   displayOrder?: number;
+  knowledgeKind?: "framework" | "official" | "news" | "mixed";
+  radialPriority?: number;
 }
 
 export interface GraphEdge {
@@ -152,7 +171,7 @@ export interface GraphEdge {
   evidenceArticleIds: string[];
   evidenceRefs?: EvidenceRef[];
   weight: number;
-  viewModes?: Array<"layered" | "network">;
+  viewModes?: Array<"layered">;
 }
 
 export interface GraphDataset {
@@ -169,8 +188,12 @@ export interface GraphDataset {
         entityIds?: string[];
       }>;
     };
-    network?: {
-      featuredEntityId?: string;
+    radial?: {
+      defaultRegionId?: string;
+      maxVisiblePerRegion?: number;
+      cityEntityTarget?: number;
+      centerTitleZh?: string;
+      centerTitleEn?: string;
     };
   };
 }
@@ -180,10 +203,15 @@ export interface CrawlLog {
   sourceName: string;
   startedAt: string;
   finishedAt: string;
-  status: "seeded" | "fetched" | "skipped" | "failed";
+  status: string;
   fetchedCount: number;
+  candidateCount?: number;
+  acceptedCount?: number;
+  rejectedCount?: number;
   publishedCount: number;
   duplicateCount: number;
+  coverageStatus?: string;
+  errorMessage?: string;
   note: string;
 }
 

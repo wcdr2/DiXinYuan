@@ -37,6 +37,7 @@ public class DatasetImportService {
   private final String importRoot;
   private final JsonSupport jsonSupport;
   private final SourceMapper sourceMapper;
+  private final SourceCatalogService sourceCatalogService;
   private final NewsMapper newsMapper;
   private final NewsVersionMapper newsVersionMapper;
   private final CrawlRunMapper crawlRunMapper;
@@ -49,6 +50,7 @@ public class DatasetImportService {
       @Value("${app.import-root}") String importRoot,
       JsonSupport jsonSupport,
       SourceMapper sourceMapper,
+      SourceCatalogService sourceCatalogService,
       NewsMapper newsMapper,
       NewsVersionMapper newsVersionMapper,
       CrawlRunMapper crawlRunMapper,
@@ -59,6 +61,7 @@ public class DatasetImportService {
     this.importRoot = importRoot;
     this.jsonSupport = jsonSupport;
     this.sourceMapper = sourceMapper;
+    this.sourceCatalogService = sourceCatalogService;
     this.newsMapper = newsMapper;
     this.newsVersionMapper = newsVersionMapper;
     this.crawlRunMapper = crawlRunMapper;
@@ -89,7 +92,12 @@ public class DatasetImportService {
     run.setNote("Imported from existing datasets JSON files.");
     crawlRunMapper.insert(run);
 
-    Map<String, SourceEntity> sourcesByName = importSources(root.resolve("config").resolve("sources.json"));
+    Map<String, SourceEntity> sourcesByName = sourceCatalogService.upsertFromFile(root.resolve("config").resolve("sources.json")).stream()
+        .collect(java.util.stream.Collectors.toMap(
+            SourceEntity::getName,
+            java.util.function.Function.identity(),
+            (left, right) -> left,
+            LinkedHashMap::new));
     ImportStats stats = importArticles(root.resolve("generated").resolve("articles.json"), run.getId(), sourcesByName);
     int snapshotCount = importSnapshots(root.resolve("generated"), run.getId());
     importLogs(root.resolve("generated").resolve("logs.json"), run.getId(), sourcesByName);
@@ -117,33 +125,6 @@ public class DatasetImportService {
       return projectRoot;
     }
     throw new IllegalStateException("Could not locate datasets directory. Checked: " + configured + " and " + projectRoot);
-  }
-
-  private Map<String, SourceEntity> importSources(Path sourcePath) {
-    JsonNode sourceArray = jsonSupport.readFile(sourcePath);
-    Map<String, SourceEntity> byName = new LinkedHashMap<>();
-    for (JsonNode node : sourceArray) {
-      SourceEntity entity = sourceMapper.selectOne(
-          new LambdaQueryWrapper<SourceEntity>().eq(SourceEntity::getSourceCode, text(node, "id")));
-      if (entity == null) {
-        entity = new SourceEntity();
-        entity.setSourceCode(text(node, "id"));
-      }
-      entity.setName(text(node, "name"));
-      entity.setType(text(node, "type"));
-      entity.setSiteUrl(text(node, "siteUrl"));
-      entity.setLanguage(text(node, "language"));
-      entity.setTrustLevel(text(node, "trustLevel"));
-      entity.setActive(node.path("isActive").asBoolean(true));
-      entity.setCrawlRuleJson(jsonSupport.stringify(node.path("crawlRule")));
-      if (entity.getId() == null) {
-        sourceMapper.insert(entity);
-      } else {
-        sourceMapper.updateById(entity);
-      }
-      byName.put(entity.getName(), entity);
-    }
-    return byName;
   }
 
   private ImportStats importArticles(Path articlesPath, Long crawlRunId, Map<String, SourceEntity> sourcesByName) {
@@ -205,7 +186,8 @@ public class DatasetImportService {
     source.setSiteUrl(text(article, "sourceUrl"));
     source.setLanguage(text(article, "language"));
     source.setTrustLevel("medium");
-    source.setActive(true);
+    source.setWhitelistEntityId("");
+    source.setActive(false);
     source.setCrawlRuleJson("{}");
     sourceMapper.insert(source);
     return source;
@@ -213,13 +195,14 @@ public class DatasetImportService {
 
   private NewsVersionEntity toVersion(JsonNode article, Long newsId, Long crawlRunId, String hash) {
     NewsVersionEntity version = new NewsVersionEntity();
+    String originalUrl = text(article, "originalUrl");
     version.setNewsId(newsId);
     version.setCrawlRunId(crawlRunId);
     version.setTitle(text(article, "title"));
     version.setSummary(text(article, "summary"));
     version.setCoverImage(text(article, "coverImage"));
     version.setSourceUrl(text(article, "sourceUrl"));
-    version.setOriginalUrl(text(article, "originalUrl"));
+    version.setOriginalUrl(originalUrl);
     version.setPublishedAt(TimeSupport.parseToLocalDateTime(text(article, "publishedAt")));
     version.setLanguage(text(article, "language"));
     version.setCategory(text(article, "category"));
@@ -228,6 +211,10 @@ public class DatasetImportService {
     version.setEntityIdsJson(jsonSupport.stringify(article.path("entityIds")));
     version.setIsGuangxiRelated(article.path("isGuangxiRelated").asBoolean(false));
     version.setContentHash(hash);
+    version.setUrlVerifiedAt(LocalDateTime.now());
+    version.setUrlStatus("accessible");
+    version.setFinalUrl(originalUrl);
+    version.setBodyText(text(article, "bodyText"));
     return version;
   }
 

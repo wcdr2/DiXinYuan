@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import mysql from "mysql2/promise";
 import { graphResearchBase } from "../datasets/seed/graph-research-base.mjs";
 import {
   beibuGulfTheme,
@@ -60,9 +61,11 @@ const enStopwords = new Set([
 ]);
 
 const domainPhrases = [
+  "地球信息科学",
   "地理信息",
   "实景三维",
   "低空经济",
+  "低空遥感",
   "北斗应用",
   "海洋地理信息",
   "遥感",
@@ -70,7 +73,10 @@ const domainPhrases = [
   "调查监测",
   "智能测绘",
   "时空信息",
+  "时空智能",
+  "自然资源数字化",
   "数字孪生",
+  "智慧城市",
   "GeoAI",
   "geospatial",
   "digital twin",
@@ -164,6 +170,34 @@ const blockedKeywordTerms = new Set([
   "中国科学院",
   "data",
 ]);
+const requiredSummaryTerms = [
+  "地球信息科学",
+  "遥感",
+  "测绘",
+  "GIS",
+  "北斗",
+  "空天信息",
+  "实景三维",
+  "时空智能",
+  "自然资源数字化",
+  "低空遥感",
+  "数字孪生",
+  "智慧城市",
+];
+const requiredTermAliases = new Map([
+  ["地球信息科学", ["地球信息科学", "geoinformatics", "earth information science", "geographic information science"]],
+  ["遥感", ["遥感", "remote sensing", "earth observation", "earth observing", "卫星遥感", "satellite imagery", "satellite image", "landsat", "sentinel", "copernicus", "synthetic aperture radar", "sar"]],
+  ["测绘", ["测绘", "surveying", "mapping", "mapped", "maps", "geomatics", "geodesy", "cartography"]],
+  ["GIS", ["GIS", "地理信息系统", "geospatial", "spatial data", "spatial analysis", "location intelligence", "location data", "interactive map", "web mapping", "web gis", "mobile gis", "arcgis", "qgis"]],
+  ["北斗", ["北斗", "beidou", "bds", "卫星导航", "导航定位", "高精度定位"]],
+  ["空天信息", ["空天信息", "aerospace information", "space information", "space-based information", "space data", "satellite", "space technology"]],
+  ["实景三维", ["实景三维", "3d reality", "reality mesh", "三维建模", "三维模型", "倾斜摄影", "点云", "lidar", "激光雷达"]],
+  ["时空智能", ["时空智能", "spatiotemporal intelligence", "spatial-temporal intelligence", "空间智能", "地理空间智能", "geoai", "时空数据", "空间数据"]],
+  ["自然资源数字化", ["自然资源数字化", "自然资源", "natural resources", "国土空间", "调查监测"]],
+  ["低空遥感", ["低空遥感", "低空", "无人机遥感", "uav remote sensing", "航测", "航空摄影", "photogrammetry"]],
+  ["数字孪生", ["数字孪生", "digital twin", "城市信息模型", "cim"]],
+  ["智慧城市", ["智慧城市", "smart city", "smart cities"]],
+]);
 
 const blockedOriginalHosts = new Set(["gzw.gxzf.gov.cn", "gxt.gxzf.gov.cn"]);
 
@@ -190,6 +224,47 @@ const mapModeColors = {
 async function readJson(filePath) {
   const content = await readFile(filePath, "utf8");
   return JSON.parse(content.replace(/^\uFEFF/, ""));
+}
+
+async function readEnv(filePath) {
+  try {
+    const content = await readFile(filePath, "utf8");
+    return Object.fromEntries(
+      content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#") && line.includes("="))
+        .map((line) => {
+          const index = line.indexOf("=");
+          let value = line.slice(index + 1);
+          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          return [line.slice(0, index), value];
+        }),
+    );
+  } catch {
+    return {};
+  }
+}
+
+async function datasource() {
+  const env = {
+    ...(await readEnv(path.join(rootDir, ".env.example"))),
+    ...(await readEnv(path.join(rootDir, ".env.local"))),
+    ...process.env,
+  };
+  const url = env.SPRING_DATASOURCE_URL || "jdbc:mysql://localhost:3306/gx_geo_news";
+  const match = url.match(/jdbc:mysql:\/\/([^:/?]+)(?::(\d+))?\/([^?]+)/);
+  if (!match) return null;
+  return {
+    host: match[1],
+    port: match[2] ? Number(match[2]) : 3306,
+    database: match[3],
+    user: env.SPRING_DATASOURCE_USERNAME || "root",
+    password: env.SPRING_DATASOURCE_PASSWORD || "",
+    charset: "utf8mb4",
+  };
 }
 
 function cleanWhitespace(value) {
@@ -239,6 +314,17 @@ function slugify(value) {
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function parseJsonList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
 }
 
 function splitKeywords(value) {
@@ -308,6 +394,37 @@ function cleanSummaryText(value) {
     return "";
   }
 
+  return summary;
+}
+
+function containsTerm(text, term) {
+  const lowerText = String(text ?? "").toLowerCase();
+  const lowerTerm = String(term ?? "").toLowerCase();
+  if (!lowerTerm) {
+    return false;
+  }
+  if (/[\u4e00-\u9fa5]/.test(lowerTerm)) {
+    return lowerText.includes(lowerTerm);
+  }
+  return new RegExp(`\\b${escapeRegExp(lowerTerm)}\\b`, "i").test(lowerText);
+}
+
+function hasRequiredSummaryTerm(summary) {
+  return requiredSummaryTerms.some((term) => String(summary ?? "").includes(term));
+}
+
+function requiredSummaryTermFor(title, summary, keywords = []) {
+  const text = `${title ?? ""} ${summary ?? ""} ${keywords.join(" ")}`;
+  for (const term of requiredSummaryTerms) {
+    const aliases = requiredTermAliases.get(term) ?? [term];
+    if (aliases.some((alias) => containsTerm(text, alias))) {
+      return term;
+    }
+  }
+  return "";
+}
+
+function ensureRequiredSummaryTerm(summary, title, keywords = []) {
   return summary;
 }
 
@@ -704,18 +821,23 @@ function normalizeArticle(article, index, baseEntities, sourceLookup) {
     return null;
   }
 
-  const normalizedSummary = pickFirstSanitized(article.summary, normalizedTitle);
+  let normalizedSummary = pickFirstSanitized(article.summary, normalizedTitle);
   if (!normalizedSummary) {
     return null;
   }
 
-  const normalizedArticle = {
+  let normalizedArticle = {
     ...article,
     title: normalizedTitle,
     summary: normalizedSummary,
   };
 
   const keywords = unique(extractKeywordCandidates(normalizedArticle, baseEntities));
+  normalizedSummary = ensureRequiredSummaryTerm(normalizedSummary, normalizedTitle, keywords);
+  if (!hasRequiredSummaryTerm(normalizedSummary)) {
+    return null;
+  }
+  normalizedArticle = { ...normalizedArticle, summary: normalizedSummary };
   const entityIds = unique(resolveEntities(normalizedArticle, baseEntities));
   const regionTags = resolveArticleRegionTags({ ...normalizedArticle, entityIds }, entityLookup);
   const category = classifyArticle(normalizedArticle);
@@ -1026,7 +1148,7 @@ function buildKnowledgeGraph(articles, baseEntities) {
         sourceEntityId: blueprint.sourceEntityId,
         targetEntityId: blueprint.targetEntityId,
         relationType: blueprint.relationType,
-        viewModes: blueprint.viewModes ?? ["layered", "network"],
+        viewModes: blueprint.viewModes ?? ["layered"],
         evidenceArticleIds,
         evidenceRefs,
         weight,
@@ -1083,9 +1205,79 @@ function buildKnowledgeGraph(articles, baseEntities) {
             .map((entity) => entity.id),
         })),
       },
-      network: graphResearchBase.views.network,
+      radial: graphResearchBase.views.radial,
     },
   };
+}
+
+function auditKnowledgeGraph(graph) {
+  const entityIds = new Set();
+  const duplicateEntityIds = [];
+  const blankEntityIds = [];
+  graph.entities.forEach((entity) => {
+    if (!String(entity.name ?? "").trim()) {
+      blankEntityIds.push(entity.id);
+    }
+    if (entityIds.has(entity.id)) {
+      duplicateEntityIds.push(entity.id);
+    }
+    entityIds.add(entity.id);
+  });
+
+  const invalidEdges = graph.edges.filter(
+    (edge) => !entityIds.has(edge.sourceEntityId) || !entityIds.has(edge.targetEntityId),
+  );
+  const linkedEntityIds = new Set(graph.edges.flatMap((edge) => [edge.sourceEntityId, edge.targetEntityId]));
+  const isolatedEntityIds = graph.entities
+    .filter((entity) => entity.id !== guangxiProvince.id && !linkedEntityIds.has(entity.id))
+    .map((entity) => entity.id);
+  const edgesWithoutEvidence = graph.edges.filter((edge) => (edge.evidenceRefs?.length ?? 0) === 0);
+  const cityScopes = (graph.regionScopes ?? []).filter((scope) => scope.spatialScope === "city");
+  const missingCityCoverage = cityScopes
+    .map((scope) => {
+      const cityEntities = graph.entities.filter(
+        (entity) => entity.id === scope.id || entity.parentId === scope.id || entity.regionIds?.includes(scope.id),
+      );
+      const classCount = new Set(cityEntities.map((entity) => entity.elementClass).filter(Boolean)).size;
+      return {
+        id: scope.id,
+        total: cityEntities.length,
+        classCount,
+      };
+    })
+    .filter((item) => item.total < 70 || item.classCount < 5);
+
+  const failures = [];
+  if (graph.entities.length < 1000) {
+    failures.push(`expected at least 1000 graph nodes, got ${graph.entities.length}`);
+  }
+  if (duplicateEntityIds.length > 0) {
+    failures.push(`duplicate entity ids: ${duplicateEntityIds.slice(0, 8).join(", ")}`);
+  }
+  if (blankEntityIds.length > 0) {
+    failures.push(`blank entity names: ${blankEntityIds.slice(0, 8).join(", ")}`);
+  }
+  if (invalidEdges.length > 0) {
+    failures.push(`edges with missing endpoints: ${invalidEdges.length}`);
+  }
+  if (isolatedEntityIds.length > 0) {
+    failures.push(`isolated entities: ${isolatedEntityIds.slice(0, 8).join(", ")}`);
+  }
+  if (edgesWithoutEvidence.length > 0) {
+    failures.push(`edges without evidence: ${edgesWithoutEvidence.length}`);
+  }
+  if (missingCityCoverage.length > 0) {
+    failures.push(
+      `city coverage below target: ${missingCityCoverage
+        .slice(0, 8)
+        .map((item) => `${item.id}:${item.total}/${item.classCount}`)
+        .join(", ")}`,
+    );
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Knowledge graph audit failed: ${failures.join("; ")}`);
+  }
 }
 
 function normalizeMapKeyword(value) {
@@ -1222,7 +1414,9 @@ function buildMapDataset(articles, graph) {
       .filter((entity) => (entity.regionIds ?? []).includes(region.id))
       .map((entity) => entity.id);
 
-    const entityIds = unique([...graphEntityIds, ...matchingArticles.flatMap((article) => article.entityIds ?? [])]);
+  const entityIds = unique([...graphEntityIds, ...matchingArticles.flatMap((article) => article.entityIds ?? [])]).filter((entityId) =>
+    entityLookup.has(entityId),
+  );
     const subjectEntityCount = entityIds.filter(
       (entityId) => entityLookup.get(entityId)?.elementClass === "subject",
     ).length;
@@ -1629,7 +1823,7 @@ async function crawlWpJsonSource(source) {
   const articles = response.data
     .map((post) => {
       const title = cleanTitle(post.title?.rendered, source.name);
-      const summary = pickFirstSanitized(pickExcerptFromWp(post), title);
+      const summary = pickFirstSanitized(pickExcerptFromWp(post));
       if (!title || title.length < 6 || !summary || !isRelevantArticle(source, title, summary)) {
         return null;
       }
@@ -1749,6 +1943,70 @@ function finalizeLogs(sources, crawlResults, dedupedArticles, fallbackSeedArticl
   });
 }
 
+async function loadDatabaseArticles() {
+  const config = await datasource();
+  if (!config) return [];
+  let connection;
+  try {
+    connection = await mysql.createConnection(config);
+    const summaryWhere = requiredSummaryTerms.map(() => "v.summary LIKE ?").join(" OR ");
+    const [rows] = await connection.query(
+      `SELECT
+         n.news_code AS id,
+         n.slug,
+         v.title,
+         v.summary,
+         v.cover_image AS coverImage,
+         s.name AS sourceName,
+         v.source_url AS sourceUrl,
+         v.original_url AS originalUrl,
+         v.published_at AS publishedAt,
+         v.language,
+         v.category,
+         v.keywords_json AS keywordsJson,
+         v.region_tags_json AS regionTagsJson,
+         v.entity_ids_json AS entityIdsJson,
+         v.is_guangxi_related AS isGuangxiRelated
+       FROM news n
+       JOIN news_versions v ON n.current_version_id = v.id
+       JOIN sources s ON n.source_id = s.id
+       WHERE v.published_at >= '2024-01-01'
+         AND v.published_at <= NOW()
+         AND s.active = 1
+         AND s.whitelist_entity_id IS NOT NULL
+         AND s.whitelist_entity_id <> ''
+         AND v.url_status = 'accessible'
+         AND (${summaryWhere})
+       ORDER BY v.published_at DESC, n.id DESC`,
+      requiredSummaryTerms.map((term) => `%${term}%`),
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      summary: row.summary,
+      coverImage: row.coverImage || undefined,
+      sourceName: row.sourceName,
+      sourceUrl: row.sourceUrl,
+      originalUrl: row.originalUrl,
+      publishedAt: new Date(row.publishedAt).toISOString(),
+      language: row.language === "en" ? "en" : "zh",
+      category: row.category || undefined,
+      keywords: parseJsonList(row.keywordsJson),
+      regionTags: parseJsonList(row.regionTagsJson),
+      isGuangxiRelated: Boolean(row.isGuangxiRelated),
+      entityIds: parseJsonList(row.entityIdsJson),
+    }));
+  } catch (error) {
+    console.warn(`Database article export skipped: ${error.message}`);
+    return [];
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
+  }
+}
+
 async function main() {
   await mkdir(generatedDir, { recursive: true });
 
@@ -1757,26 +2015,35 @@ async function main() {
     readJson(path.join(seedDir, "articles.json")),
     readJson(path.join(seedDir, "entities.json")),
   ]);
-  const baseEntities = mergeBaseEntities(seedBaseEntities, graphResearchBase.entities);
+  const articleBaseEntities = mergeBaseEntities(seedBaseEntities, graphResearchBase.entities);
+  const graphBaseEntities = graphResearchBase.entities;
 
+  const databaseArticles = await loadDatabaseArticles();
   const crawlResults = [];
-  for (const source of sources.filter((item) => item.isActive)) {
-    crawlResults.push(await crawlSource(source));
+  if (databaseArticles.length === 0) {
+    for (const source of sources.filter((item) => item.isActive)) {
+      crawlResults.push(await crawlSource(source));
+    }
   }
 
-  const liveArticles = crawlResults.flatMap((result) => result.articles);
+  const liveArticles = databaseArticles.length > 0
+    ? databaseArticles
+    : crawlResults.flatMap((result) => result.articles);
   const liveSourceNames = new Set(liveArticles.map((article) => article.sourceName));
-  const fallbackSeedArticles = seedArticles.filter((article) => !liveSourceNames.has(article.sourceName));
+  const fallbackSeedArticles = databaseArticles.length > 0
+    ? []
+    : seedArticles.filter((article) => !liveSourceNames.has(article.sourceName));
 
   const sourceLookup = new Map(sources.map((source) => [source.name, source]));
 
   const normalizedArticles = [...liveArticles, ...fallbackSeedArticles]
-    .map((article, index) => normalizeArticle(article, index, baseEntities, sourceLookup))
+    .map((article, index) => normalizeArticle(article, index, articleBaseEntities, sourceLookup))
     .filter(Boolean)
     .sort((left, right) => right.publishedAt.localeCompare(left.publishedAt));
 
-  const dedupedArticles = dedupeArticles(normalizedArticles);
-  const graph = buildKnowledgeGraph(dedupedArticles, baseEntities);
+  const dedupedArticles = databaseArticles.length > 0 ? normalizedArticles : dedupeArticles(normalizedArticles);
+  const graph = buildKnowledgeGraph(dedupedArticles, graphBaseEntities);
+  auditKnowledgeGraph(graph);
   const map = buildMapDataset(dedupedArticles, graph);
   const wordCloud = buildWordCloud(dedupedArticles);
   const logs = finalizeLogs(sources, crawlResults, dedupedArticles, fallbackSeedArticles);
@@ -1795,7 +2062,9 @@ async function main() {
   console.log(
     `Generated ${dedupedArticles.length} articles, ${graph.entities.length} entities and ${graph.edges.length} graph edges.`,
   );
-  console.log(`Live articles: ${liveArticles.length}; seed fallback articles: ${fallbackSeedArticles.length}.`);
+  console.log(
+    `Live articles: ${liveArticles.length}; seed fallback articles: ${fallbackSeedArticles.length}; source=${databaseArticles.length > 0 ? "database" : "crawler"}.`,
+  );
 }
 
 main().catch((error) => {

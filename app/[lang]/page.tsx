@@ -239,7 +239,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 {dict.cards.allCloud}
               </Link>
             </div>
-            <WordCloud locale={lang} items={wordCloud} variant="dark" />
+            <WordCloud locale={lang} items={wordCloud} variant="dark" mode="preview" maxItems={14} />
           </div>
           <div className="card-panel analytics-panel analytics-panel--heroic analytics-panel--map">
             <div className="section-heading-row">

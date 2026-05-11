@@ -114,6 +114,8 @@ const warnings = [];
 const sourceNameSet = new Set(sources.map((source) => source.name));
 const articleIdSet = new Set();
 const articleRouteSet = new Set();
+const graphEntityIds = graph.entities.map((entity) => entity.id);
+const graphEntityIdSet = new Set(graphEntityIds);
 const entityMap = new Map(graph.entities.map((entity) => [entity.id, entity]));
 const graphRegionScopeIds = (graph.regionScopes ?? []).map((scope) => scope.id);
 const graphRegionScopeSet = new Set(graphRegionScopeIds);
@@ -121,7 +123,48 @@ const mapRegionIds = map.regions.map((region) => region.id);
 const mapRegionIdSet = new Set(mapRegionIds);
 const geometryIdSet = new Set((map.geometryAssets ?? []).map((asset) => asset.id));
 const graphLayerKeys = ["subject", "goal", "content", "activity", "evaluation"];
-const abstractCitySubjectPattern = /协同主体|承载主体|创新人才主体/;
+const cityGraphMinimums = {
+  total: 80,
+  subject: 16,
+  goal: 10,
+  content: 22,
+  activity: 24,
+  evaluation: 10,
+};
+const requiredSourceIds = [
+  "gx-dnr",
+  "gx-stats",
+  "nn-dnr",
+  "lz-dnr",
+  "gl-dnr",
+  "bh-dnr",
+  "wz-dnr",
+  "qz-dnr",
+  "fcg-dnr",
+  "gg-dnr",
+  "yl-dnr",
+  "bs-dnr",
+  "hz-dnr",
+  "hc-dnr",
+  "lb-dnr",
+  "cz-dnr",
+];
+const requiredGuilinTerms = [
+  "桂林理工大学",
+  "桂林电子科技大学",
+  "桂林市自然资源局",
+  "桂林绿色保护",
+  "桂林漓江流域绿色保护",
+  "桂林文旅数字孪生",
+  "桂林漓江流域绿色保护卫星遥感季度覆盖数据",
+  "桂林北斗高精度定位基准接入",
+  "桂林三维建模",
+  "桂林自然资源数据建库",
+  "桂林18.2:30.5:51.3结构优化指标",
+];
+const forbiddenGraphTermPattern = /服务群|企业群|主体群|产业链企业梯队|测绘服务企业群|遥感应用企业群|北斗位置服务群|协同主体|承载主体|创新人才主体/;
+const wordCloudCategories = new Set(["all", "enterprise", "technology", "policy"]);
+const wordCloudCategoryCounts = new Map([...wordCloudCategories].map((category) => [category, 0]));
 
 for (const article of articles) {
   assert(Boolean(article.id) && !articleIdSet.has(article.id), `Duplicate or missing article id: ${article.id}`, errors);
@@ -148,12 +191,47 @@ for (const source of sources) {
   assert(isHttpUrl(source.siteUrl), `Source siteUrl is invalid: ${source.id}`, errors);
 }
 
+for (const sourceId of requiredSourceIds) {
+  const source = sources.find((item) => item.id === sourceId);
+  assert(Boolean(source), `Required graph/news source is missing: ${sourceId}`, errors);
+  assert(source?.isActive === true, `Required graph/news source is not active: ${sourceId}`, errors);
+  assert(Boolean(source?.whitelistEntityId), `Required graph/news source lacks whitelist binding: ${sourceId}`, errors);
+}
+
+const gxDnrSource = sources.find((item) => item.id === "gx-dnr");
+const gxDnrFallbacks = gxDnrSource?.crawlRule?.fallbackEntryUrls ?? [];
+assert(
+  gxDnrFallbacks.some((url) => String(url).includes("chzz")) || gxDnrFallbacks.some((url) => String(url).includes("chgl")),
+  "广西自然资源厅 source must include measurement qualification/public bulletin fallback entry.",
+  errors,
+);
+
+assert(graphEntityIdSet.size === graphEntityIds.length, "Knowledge graph contains duplicate entity ids.", errors);
+assert(!("network" in (graph.views ?? {})), "Knowledge graph must not expose views.network.", errors);
+assert(
+  !(graph.edges ?? []).some((edge) => (edge.viewModes ?? []).includes("network")),
+  "Knowledge graph edges must not include network viewModes.",
+  errors,
+);
+assert(graph.entities.length === 1 + guangxiCityIds.length * 83, `Knowledge graph entity count must match Guangxi + 14 city graphs: ${graph.entities.length}`, errors);
+const provinceNeighbors = new Set(
+  graph.edges
+    .filter((edge) => edge.sourceEntityId === guangxiProvince.id || edge.targetEntityId === guangxiProvince.id)
+    .map((edge) => (edge.sourceEntityId === guangxiProvince.id ? edge.targetEntityId : edge.sourceEntityId)),
+);
+assert(provinceNeighbors.size === guangxiCityIds.length, `Guangxi overview must connect exactly 14 cities: ${provinceNeighbors.size}`, errors);
+assert(guangxiCityIds.every((cityId) => provinceNeighbors.has(cityId)), "Guangxi overview is missing one or more city nodes.", errors);
+
 const elementCounts = new Map();
 for (const entity of graph.entities) {
   assert(Boolean(entity.elementClass), `Entity missing elementClass: ${entity.id}`, errors);
+  assert(!forbiddenGraphTermPattern.test(`${entity.name} ${entity.intro} ${(entity.tags ?? []).join(" ")}`), `Forbidden generic graph term detected: ${entity.id} -> ${entity.name}`, errors);
   if (entity.elementClass) {
     elementCounts.set(entity.elementClass, (elementCounts.get(entity.elementClass) ?? 0) + 1);
   }
+  (entity.sourceRefs ?? []).forEach((ref) => {
+    assert(isHttpUrl(ref.url), `Graph entity source URL is invalid: ${entity.id} -> ${ref.title}`, errors);
+  });
 }
 
 for (const requiredClass of ["subject", "goal", "content", "activity", "evaluation"]) {
@@ -167,6 +245,8 @@ assert(!graphRegionScopeSet.has("beibu-gulf"), "Knowledge graph regionScopes sti
 assert(!(graph.entities ?? []).some((entity) => entity.id === "beibu-gulf"), "Knowledge graph entities still contain beibu-gulf.", errors);
 assert(graph.views?.layered?.columns?.length === 5, "Knowledge graph layered view columns are missing or incomplete.", errors);
 
+const entityEvidenceCoverage = new Map(graph.entities.map((entity) => [entity.id, (entity.relatedArticleIds?.length ?? 0) > 0 || (entity.sourceRefs?.length ?? 0) > 0]));
+
 for (const edge of graph.edges) {
   assert(entityMap.has(edge.sourceEntityId) && entityMap.has(edge.targetEntityId), `Graph edge references missing entity: ${edge.sourceEntityId} -> ${edge.targetEntityId}`, errors);
   assert(
@@ -174,11 +254,19 @@ for (const edge of graph.edges) {
     `Graph edge has no evidence: ${edge.sourceEntityId} -> ${edge.targetEntityId}`,
     errors,
   );
+  if ((edge.evidenceArticleIds?.length ?? 0) > 0 || (edge.evidenceRefs?.length ?? 0) > 0) {
+    entityEvidenceCoverage.set(edge.sourceEntityId, true);
+    entityEvidenceCoverage.set(edge.targetEntityId, true);
+  }
   (edge.evidenceRefs ?? [])
     .filter((ref) => ref.kind === "research")
     .forEach((ref) => {
       assert(isHttpUrl(ref.url), `Graph research evidence is missing a source URL: ${edge.sourceEntityId} -> ${edge.targetEntityId} (${ref.title})`, errors);
     });
+}
+
+for (const entity of graph.entities) {
+  assert(entityEvidenceCoverage.get(entity.id) === true, `Graph entity has no direct or related evidence: ${entity.id}`, errors);
 }
 
 for (const cityId of guangxiCityIds) {
@@ -198,12 +286,25 @@ for (const cityId of guangxiCityIds) {
     assert(Boolean(entity), `City subject is missing: ${subjectId}`, errors);
     assert(entity?.elementClass === "subject", `City subject elementClass is invalid: ${subjectId}`, errors);
     assert((entity?.regionIds ?? []).includes(cityId), `City subject is not scoped to its city: ${subjectId}`, errors);
-    assert(!abstractCitySubjectPattern.test(entity?.name ?? ""), `City subject still uses an abstract name: ${subjectId} -> ${entity?.name}`, errors);
+    assert(!forbiddenGraphTermPattern.test(entity?.name ?? ""), `City subject still uses a forbidden generic name: ${subjectId} -> ${entity?.name}`, errors);
     assert((entity?.sourceRefs ?? []).length > 0, `City subject is missing source refs: ${subjectId}`, errors);
     (entity?.sourceRefs ?? []).forEach((ref) => {
       assert(isHttpUrl(ref.url), `City subject source URL is invalid: ${subjectId} -> ${ref.title}`, errors);
     });
   });
+
+  const cityScopedEntities = graph.entities.filter((entity) => {
+    if (entity.id === cityId) {
+      return true;
+    }
+    return entity.parentId === cityId || (entity.regionIds ?? []).includes(cityId);
+  });
+  assert(
+    cityScopedEntities.length >= cityGraphMinimums.total,
+    `City graph has fewer than ${cityGraphMinimums.total} nodes: ${cityId} -> ${cityScopedEntities.length}`,
+    errors,
+  );
+  assert(cityScopedEntities.length === 83, `City graph must expose exactly 83 nodes for this release: ${cityId} -> ${cityScopedEntities.length}`, errors);
 
   graphLayerKeys.forEach((layerKey) => {
     const scopedEntities = graph.entities.filter((entity) => {
@@ -212,7 +313,16 @@ for (const cityId of guangxiCityIds) {
       }
       return entity.parentId === cityId || (entity.regionIds ?? []).includes(cityId);
     });
-    assert(scopedEntities.length > 0, `City layer is empty after generation: ${cityId} -> ${layerKey}`, errors);
+    assert(
+      scopedEntities.length >= cityGraphMinimums[layerKey],
+      `City layer is below minimum after generation: ${cityId} -> ${layerKey} (${scopedEntities.length}/${cityGraphMinimums[layerKey]})`,
+      errors,
+    );
+    assert(
+      scopedEntities.length === cityGraphMinimums[layerKey],
+      `City layer count must match the rebuilt graph contract: ${cityId} -> ${layerKey} (${scopedEntities.length}/${cityGraphMinimums[layerKey]})`,
+      errors,
+    );
 
     scopedEntities.forEach((entity) => {
       const hasDirectCityRelation = graph.edges.some(
@@ -220,15 +330,36 @@ for (const cityId of guangxiCityIds) {
           (edge.sourceEntityId === cityId && edge.targetEntityId === entity.id) ||
           (edge.targetEntityId === cityId && edge.sourceEntityId === entity.id),
       );
-      assert(hasDirectCityRelation, `City network center is missing direct ${layerKey} relation: ${cityId} -> ${entity.id}`, errors);
+      assert(hasDirectCityRelation, `City graph center is missing direct ${layerKey} relation: ${cityId} -> ${entity.id}`, errors);
     });
   });
 }
 
+const guilinSearchText = graph.entities
+  .filter((entity) => entity.parentId === "guilin" || (entity.regionIds ?? []).includes("guilin"))
+  .map((entity) => `${entity.name} ${entity.intro} ${(entity.tags ?? []).join(" ")}`)
+  .join("\n");
+requiredGuilinTerms.forEach((term) => {
+  assert(guilinSearchText.includes(term), `Guilin graph is missing required concrete term: ${term}`, errors);
+});
+
 for (const item of wordCloud) {
-  assert(Boolean(item.term) && item.articleCount >= 1 && item.weight >= 1, `Invalid word cloud item: ${JSON.stringify(item)}`, errors);
+  const term = String(item.term ?? "").trim();
+  assert(Boolean(term) && item.articleCount >= 1 && item.weight >= 1, `Invalid word cloud item: ${JSON.stringify(item)}`, errors);
+  assert(wordCloudCategories.has(item.category), `Word cloud item has unsupported category: ${JSON.stringify(item)}`, errors);
+  assert(term.length <= 40, `Word cloud term is too long for chip display: ${term}`, errors);
+  assert(!templateArtifactPattern.test(term), `Word cloud term contains template artifact text: ${term}`, errors);
   assert(!blockedWordCloudTerms.has(item.term), `Blocked word cloud term detected: ${item.term}`, errors);
+  wordCloudCategoryCounts.set(item.category, (wordCloudCategoryCounts.get(item.category) ?? 0) + 1);
 }
+
+for (const [category, count] of wordCloudCategoryCounts) {
+  assert(count > 0 && count <= 20, `Word cloud category count is out of bounds: ${category} -> ${count}`, errors);
+}
+
+const wordCloudComponentSource = readText("components/word-cloud.tsx");
+assert(!/fontSize\s*:\s*[`{].*weight/s.test(wordCloudComponentSource), "Word cloud display must not map raw weight directly to fontSize.", errors);
+assert(/featured[\s\S]*strong[\s\S]*medium[\s\S]*normal[\s\S]*small/.test(wordCloudComponentSource), "Word cloud display levels are missing from the component.", errors);
 
 assert(Array.isArray(map.regions) && map.regions.length === guangxiCityIds.length, `Map region count is invalid: ${map.regions?.length ?? 0}`, errors);
 assert(Array.isArray(map.geometryAssets) && map.geometryAssets.length === guangxiCityIds.length, `Map geometry asset count is invalid: ${map.geometryAssets?.length ?? 0}`, errors);

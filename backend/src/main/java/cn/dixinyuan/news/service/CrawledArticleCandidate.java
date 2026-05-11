@@ -13,4 +13,28 @@ public record CrawledArticleCandidate(
     LocalDateTime publishedAt,
     String language,
     List<String> keywords,
-    Map<String, Object> rawPayload) {}
+    String bodyText,
+    Map<String, Object> rawPayload) {
+  public CrawledArticleCandidate(
+      String title,
+      String summary,
+      String coverImage,
+      String sourceUrl,
+      String originalUrl,
+      LocalDateTime publishedAt,
+      String language,
+      List<String> keywords,
+      Map<String, Object> rawPayload) {
+    this(
+        title,
+        summary,
+        coverImage,
+        sourceUrl,
+        originalUrl,
+        publishedAt,
+        language,
+        keywords,
+        NewsBodyTextSupport.bodyTextFromPayload(rawPayload),
+        rawPayload);
+  }
+}

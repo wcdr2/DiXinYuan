@@ -25,7 +25,7 @@ public class CrawlWindowService {
   public CrawlWindow resolve(LocalDateTime requestedStart, LocalDateTime requestedEnd) {
     LocalDateTime end = requestedEnd == null ? LocalDateTime.now() : requestedEnd;
     if (requestedStart != null) {
-      return new CrawlWindow(requestedStart, end, false);
+      return new CrawlWindow(validStart(requestedStart, end), end, false);
     }
 
     CrawlRunEntity latest = crawlRunMapper.selectList(
@@ -39,8 +39,21 @@ public class CrawlWindowService {
         .findFirst()
         .orElse(null);
     if (latest == null) {
-      return new CrawlWindow(firstStartAt, end, true);
+      return new CrawlWindow(validStart(firstStartAt, end), end, true);
     }
-    return new CrawlWindow(latest.getWindowEndAt().minusMinutes(overlapMinutes), end, false);
+    LocalDateTime latestEnd = latest.getWindowEndAt();
+    LocalDateTime start = latestEnd == null || !latestEnd.isBefore(end)
+        ? end.minusMinutes(overlapMinutes)
+        : latestEnd.minusMinutes(overlapMinutes);
+    return new CrawlWindow(validStart(start, end), end, false);
+  }
+
+  private LocalDateTime validStart(LocalDateTime start, LocalDateTime end) {
+    LocalDateTime clamped = start.isBefore(firstStartAt) ? firstStartAt : start;
+    if (clamped.isAfter(end)) {
+      LocalDateTime overlapped = end.minusMinutes(overlapMinutes);
+      return overlapped.isBefore(firstStartAt) ? firstStartAt : overlapped;
+    }
+    return clamped;
   }
 }

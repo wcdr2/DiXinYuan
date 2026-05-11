@@ -59,7 +59,9 @@ public class NewsPersistenceService {
     newsCandidateMapper.insert(entity);
   }
 
-  public PersistResult persistAccepted(Long crawlRunId, SourceEntity source, CleanedNewsArticle article) {
+  public PersistResult persistAccepted(Long crawlRunId, SourceEntity source, CleanedNewsArticle article, ReviewResult review) {
+    String verifiedUrl = NewsCleaningService.cleanText(review.verifiedUrl());
+    String originalUrl = verifiedUrl.isBlank() ? article.originalUrl() : verifiedUrl;
     NewsEntity news = newsMapper.selectOne(
         new LambdaQueryWrapper<NewsEntity>()
             .eq(NewsEntity::getSourceId, source.getId())
@@ -94,7 +96,7 @@ public class NewsPersistenceService {
     version.setSummary(article.summary());
     version.setCoverImage(article.coverImage());
     version.setSourceUrl(article.sourceUrl());
-    version.setOriginalUrl(article.originalUrl());
+    version.setOriginalUrl(originalUrl);
     version.setPublishedAt(article.publishedAt());
     version.setLanguage(article.language());
     version.setCategory(article.category());
@@ -103,6 +105,10 @@ public class NewsPersistenceService {
     version.setEntityIdsJson(jsonSupport.stringify(article.entityIds()));
     version.setIsGuangxiRelated(article.guangxiRelated());
     version.setContentHash(article.contentHash());
+    version.setUrlVerifiedAt(now);
+    version.setUrlStatus("accessible");
+    version.setFinalUrl(originalUrl);
+    version.setBodyText(article.bodyText());
     newsVersionMapper.insert(version);
 
     news.setCurrentVersionId(version.getId());

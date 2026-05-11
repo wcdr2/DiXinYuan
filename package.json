@@ -10,9 +10,23 @@
     "typecheck": "tsc --noEmit",
     "data:refresh": "node scripts/update-datasets.mjs",
     "audit:project": "node scripts/check-project.mjs",
+    "news:audit": "node scripts/audit-strict-news.js",
+    "news:strip-added-keywords": "node scripts/strip-added-summary-keywords.js",
+    "news:cleanup:dry-run": "node scripts/cleanup-noncompliant-strict.js --dryRun",
+    "news:cleanup": "node scripts/cleanup-noncompliant-strict.js",
+    "news:backfill-natural": "node scripts/backfill-natural-summary-news.js",
+    "news:delete-sources": "node scripts/delete-source-news.js",
+    "news:assert-strict": "node scripts/assert-strict-news.js",
+    "news:verify-summary-body": "node scripts/verify-summary-body.js",
+    "news:verify-urls": "node scripts/check-url-accessibility.js",
+    "news:update-domestic-sources": "node scripts/update-domestic-priority-source-rules.js",
+    "news:restore-cleanup-audit": "node scripts/restore-news-from-cleanup-audit.js",
+    "news:refresh-snapshots": "node scripts/refresh-db-snapshots.js",
     "validate": "npm run data:refresh && npm run typecheck && npm run audit:project && npm run build:app"
   },
   "dependencies": {
+    "echarts": "^5.5.1",
+    "mysql2": "^3.22.3",
     "next": "15.2.4",
     "react": "19.0.0",
     "react-dom": "19.0.0"

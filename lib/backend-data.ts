@@ -11,11 +11,14 @@ import {
   getSources,
   getSummaryMetrics,
   getWordCloudItems,
+  paginateArticles,
+  rankRelatedArticles,
   type ArticleFilters,
 } from "@/lib/data";
 import type {
   Article,
   ArticleCategory,
+  ArticlePage,
   CrawlLog,
   GraphDataset,
   MapDataset,
@@ -25,9 +28,12 @@ import type {
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.JAVA_API_BASE_URL?.replace(/\/+$/, "") ?? "";
+const BACKEND_REVALIDATE_SECONDS = 300;
+const DISABLE_BACKEND_FETCH =
+  process.env.DISABLE_BACKEND_FETCH === "1" || process.env.NEXT_PHASE === "phase-production-build";
 
 function hasBackendApi() {
-  return API_BASE_URL.length > 0;
+  return !DISABLE_BACKEND_FETCH && API_BASE_URL.length > 0;
 }
 
 async function fetchFromBackend<T>(path: string, fallback: () => T): Promise<T> {
@@ -37,7 +43,7 @@ async function fetchFromBackend<T>(path: string, fallback: () => T): Promise<T> 
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      cache: "no-store",
+      next: { revalidate: BACKEND_REVALIDATE_SECONDS },
       headers: {
         Accept: "application/json",
       },
@@ -76,6 +82,25 @@ export async function getRuntimeArticles(filters?: ArticleFilters): Promise<Arti
   );
 }
 
+export async function getRuntimeArticlePage(filters: ArticleFilters): Promise<ArticlePage> {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.max(1, Math.min(filters.pageSize ?? 24, 60));
+  const params = new URLSearchParams();
+  appendParam(params, "query", filters.query);
+  appendParam(params, "category", filters.category);
+  appendParam(params, "source", filters.source);
+  appendParam(params, "region", filters.region);
+  appendParam(params, "guangxi", filters.guangxi);
+  appendParam(params, "sort", filters.sort);
+  params.set("page", String(page));
+  params.set("pageSize", String(pageSize));
+
+  return fetchFromBackend<ArticlePage>(
+    `/api/v1/news/page?${params.toString()}`,
+    () => paginateArticles(filterArticles(filters), page, pageSize),
+  );
+}
+
 export async function getRuntimeArticleBySlug(slug: string): Promise<Article | undefined> {
   return fetchFromBackend<Article | undefined>(
     `/api/v1/news/${encodeURIComponent(slug)}`,
@@ -88,25 +113,7 @@ export async function getRuntimeRelatedArticles(article: Article): Promise<Artic
     return getRelatedArticles(article);
   }
   const articles = await getRuntimeArticles();
-  return articles
-    .filter((candidate) => candidate.id !== article.id)
-    .map((candidate) => {
-      const keywordScore = candidate.keywords.filter((keyword) =>
-        article.keywords.includes(keyword),
-      ).length;
-      const entityScore = candidate.entityIds.filter((entityId) =>
-        article.entityIds.includes(entityId),
-      ).length;
-
-      return {
-        article: candidate,
-        score: keywordScore * 2 + entityScore,
-      };
-    })
-    .filter((entry) => entry.score > 0)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 3)
-    .map((entry) => entry.article);
+  return rankRelatedArticles(article, articles).slice(0, 3);
 }
 
 export async function getRuntimeSources(): Promise<Source[]> {
@@ -118,7 +125,34 @@ export async function getRuntimeMapDataset(): Promise<MapDataset> {
 }
 
 export async function getRuntimeGraphDataset(): Promise<GraphDataset> {
-  return fetchFromBackend<GraphDataset>("/api/v1/datasets/knowledge-graph", getGraphDataset);
+  const localGraph = getGraphDataset();
+
+  if (!hasBackendApi()) {
+    return localGraph;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/datasets/knowledge-graph`, {
+      next: { revalidate: BACKEND_REVALIDATE_SECONDS },
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return localGraph;
+    }
+
+    const backendGraph = (await response.json()) as GraphDataset;
+    const hasExpandedRadialGraph =
+      backendGraph.entities.length >= 1000 &&
+      Boolean(backendGraph.views?.radial) &&
+      (backendGraph.regionScopes?.filter((scope) => scope.spatialScope === "city").length ?? 0) >= 14;
+
+    return hasExpandedRadialGraph ? backendGraph : localGraph;
+  } catch {
+    return localGraph;
+  }
 }
 
 export async function getRuntimeLogs(): Promise<CrawlLog[]> {

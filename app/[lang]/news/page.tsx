@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { ArticleCard } from "@/components/article-card";
 import { formatDate, isLocale } from "@/lib/data";
-import { getRuntimeArticles, getRuntimeMapDataset, getRuntimeSources } from "@/lib/backend-data";
+import { getRuntimeArticlePage, getRuntimeMapDataset, getRuntimeSources, getRuntimeWordCloudItems } from "@/lib/backend-data";
 import {
   categoryLabels,
   categoryOrder,
@@ -12,6 +12,7 @@ import {
   getSourceAccessUrls,
   withLocale,
 } from "@/lib/site";
+import type { Locale } from "@/lib/types";
 
 interface NewsPageProps {
   params: Promise<{ lang: string }>;
@@ -20,6 +21,61 @@ interface NewsPageProps {
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function positiveInt(value: string | string[] | undefined, fallback: number) {
+  const parsed = Number.parseInt(firstValue(value) ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getNewsHref(
+  lang: Locale,
+  filters: {
+    query?: string;
+    category?: string;
+    source?: string;
+    region?: string;
+    guangxi?: string;
+    sort?: string;
+    pageSize?: number;
+  },
+  overrides: {
+    query?: string;
+    category?: string;
+    source?: string;
+    region?: string;
+    guangxi?: string;
+    sort?: string;
+    page?: number;
+    pageSize?: number;
+  } = {},
+) {
+  const merged = { ...filters, ...overrides };
+  const params = new URLSearchParams();
+  const append = (key: string, value: string | number | undefined) => {
+    if (value == null || value === "" || value === "all") {
+      return;
+    }
+    if (key === "page" && Number(value) <= 1) {
+      return;
+    }
+    if (key === "pageSize" && Number(value) === 24) {
+      return;
+    }
+    params.set(key, String(value));
+  };
+
+  append("query", merged.query);
+  append("category", merged.category);
+  append("source", merged.source);
+  append("region", merged.region);
+  append("guangxi", merged.guangxi);
+  append("sort", merged.sort === "latest" ? undefined : merged.sort);
+  append("page", overrides.page);
+  append("pageSize", merged.pageSize);
+
+  const query = params.toString();
+  return `${withLocale(lang, "/news")}${query ? `?${query}` : ""}`;
 }
 
 export default async function NewsPage({ params, searchParams }: NewsPageProps) {
@@ -37,20 +93,41 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
     region: firstValue(rawSearchParams.region) ?? "all",
     guangxi: (firstValue(rawSearchParams.guangxi) as "all" | "only" | undefined) ?? "all",
     sort: (firstValue(rawSearchParams.sort) as "latest" | "oldest" | undefined) ?? "latest",
+    page: positiveInt(rawSearchParams.page, 1),
+    pageSize: Math.min(positiveInt(rawSearchParams.pageSize, 24), 60),
   };
 
-  const [articles, sources, mapDataset] = await Promise.all([
-    getRuntimeArticles(filters),
+  const [articlePage, sources, mapDataset, wordCloudItems] = await Promise.all([
+    getRuntimeArticlePage(filters),
     getRuntimeSources(),
     getRuntimeMapDataset(),
+    getRuntimeWordCloudItems("all"),
   ]);
+  const articles = articlePage.content;
   const regionOptions = mapDataset.regions;
-  const leadArticle = articles[0];
+  const showSpotlight = articlePage.page <= 1;
+  const leadArticle = showSpotlight ? articles[0] : undefined;
   const leadCover = getCoverSurface(leadArticle?.coverImage);
   const leadSourceAccess = leadArticle ? getSourceAccessUrls(leadArticle.originalUrl, leadArticle.sourceUrl) : null;
-  const railArticles = articles.slice(1, 5);
-  const listArticles = articles.slice(1);
+  const railArticles = showSpotlight ? articles.slice(1, 5) : [];
+  const listArticles = showSpotlight ? articles.slice(1) : articles;
   const hasArticles = articles.length > 0;
+  const pageStart = articlePage.totalElements === 0 ? 0 : (articlePage.page - 1) * articlePage.pageSize + 1;
+  const pageEnd = Math.min(articlePage.totalElements, (articlePage.page - 1) * articlePage.pageSize + articles.length);
+  const baseFilters = {
+    query: filters.query,
+    category: filters.category,
+    source: filters.source,
+    region: filters.region,
+    guangxi: filters.guangxi,
+    sort: filters.sort,
+    pageSize: filters.pageSize,
+  };
+  const suggestionTerms = wordCloudItems
+    .map((item) => item.term)
+    .filter((term, index, terms) => terms.indexOf(term) === index)
+    .filter((term) => term.toLowerCase() !== (filters.query ?? "").trim().toLowerCase())
+    .slice(0, 8);
   const hasActiveFilters =
     Boolean(filters.query) ||
     filters.category !== "all" ||
@@ -71,7 +148,7 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
         <aside className="card-panel filter-panel card-panel--soft news-sidebar">
           <div className="news-sidebar__intro">
             <p className="section-kicker">{dict.filters.results}</p>
-            <h2>{articles.length}</h2>
+            <h2>{articlePage.totalElements}</h2>
             <p>{hasActiveFilters ? dict.filters.submit : dict.pageIntro.newsSummary}</p>
           </div>
           <form className="filter-grid filter-grid--stacked" action={withLocale(lang, "/news")} method="get">
@@ -79,6 +156,7 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
               <span>{dict.filters.query}</span>
               <input name="query" defaultValue={filters.query} placeholder={dict.filters.queryPlaceholder} />
             </label>
+            <input type="hidden" name="pageSize" value={filters.pageSize} />
             <label>
               <span>{dict.filters.category}</span>
               <select name="category" defaultValue={filters.category}>
@@ -135,6 +213,22 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
               </Link>
             </div>
           </form>
+          {suggestionTerms.length > 0 ? (
+            <div className="news-suggestion-block">
+              <span>{lang === "zh" ? "热词检索" : "Suggested searches"}</span>
+              <div className="keyword-row keyword-row--stacked">
+                {suggestionTerms.map((term) => (
+                  <Link
+                    key={term}
+                    href={getNewsHref(lang, baseFilters, { query: term, page: 1 })}
+                    className="keyword-pill"
+                  >
+                    {term}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </aside>
 
         <div className="news-main">
@@ -192,18 +286,70 @@ export default async function NewsPage({ params, searchParams }: NewsPageProps) 
             <div className="section-heading-row">
               <div>
                 <p className="section-kicker">{dict.filters.results}</p>
-                <h2>{hasArticles ? articles.length : 0}</h2>
+                <h2>{articlePage.totalElements}</h2>
+                <p className="section-subnote">
+                  {articlePage.totalElements > 0
+                    ? lang === "zh"
+                      ? `第 ${articlePage.page} / ${articlePage.totalPages} 页，当前显示 ${pageStart}-${pageEnd} 条`
+                      : `Page ${articlePage.page} of ${articlePage.totalPages}, showing ${pageStart}-${pageEnd}`
+                    : lang === "zh"
+                      ? "没有匹配结果"
+                      : "No matches"}
+                </p>
               </div>
             </div>
             {hasArticles ? (
               <div className="news-grid news-grid--editorial">
                 {(listArticles.length > 0 ? listArticles : articles).map((article) => (
-                  <ArticleCard key={article.id} article={article} locale={lang} />
+                  <ArticleCard key={article.id} article={article} locale={lang} highlight={filters.query} />
                 ))}
               </div>
             ) : (
               <div className="card-panel empty-panel">{dict.empty.news}</div>
             )}
+            {articlePage.totalPages > 1 ? (
+              <nav className="pagination-bar" aria-label={lang === "zh" ? "新闻分页" : "News pagination"}>
+                <Link
+                  href={getNewsHref(lang, baseFilters, { page: articlePage.page - 1 })}
+                  className={`pagination-button ${articlePage.hasPrevious ? "" : "is-disabled"}`}
+                  aria-disabled={!articlePage.hasPrevious}
+                >
+                  {lang === "zh" ? "上一页" : "Previous"}
+                </Link>
+                <div className="pagination-pages">
+                  {Array.from({ length: articlePage.totalPages }, (_, index) => index + 1)
+                    .filter((page) =>
+                      page === 1 ||
+                      page === articlePage.totalPages ||
+                      Math.abs(page - articlePage.page) <= 2,
+                    )
+                    .map((page, index, pages) => {
+                      const previous = pages[index - 1];
+                      const needsGap = previous != null && page - previous > 1;
+
+                      return (
+                        <span key={page} className="pagination-page-wrap">
+                          {needsGap ? <span className="pagination-gap">…</span> : null}
+                          <Link
+                            href={getNewsHref(lang, baseFilters, { page })}
+                            className={`pagination-page ${page === articlePage.page ? "is-active" : ""}`}
+                            aria-current={page === articlePage.page ? "page" : undefined}
+                          >
+                            {page}
+                          </Link>
+                        </span>
+                      );
+                    })}
+                </div>
+                <Link
+                  href={getNewsHref(lang, baseFilters, { page: articlePage.page + 1 })}
+                  className={`pagination-button ${articlePage.hasNext ? "" : "is-disabled"}`}
+                  aria-disabled={!articlePage.hasNext}
+                >
+                  {lang === "zh" ? "下一页" : "Next"}
+                </Link>
+              </nav>
+            ) : null}
           </section>
         </div>
       </div>

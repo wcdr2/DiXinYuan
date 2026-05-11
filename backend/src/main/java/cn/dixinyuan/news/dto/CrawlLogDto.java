@@ -7,6 +7,11 @@ public record CrawlLogDto(
     String finishedAt,
     String status,
     Integer fetchedCount,
+    Integer candidateCount,
+    Integer acceptedCount,
+    Integer rejectedCount,
     Integer publishedCount,
     Integer duplicateCount,
+    String coverageStatus,
+    String errorMessage,
     String note) {}

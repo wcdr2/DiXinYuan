@@ -24,6 +24,10 @@ public class NewsVersionEntity {
   private String entityIdsJson;
   private Boolean isGuangxiRelated;
   private String contentHash;
+  private LocalDateTime urlVerifiedAt;
+  private String urlStatus;
+  private String finalUrl;
+  private String bodyText;
   private LocalDateTime createdAt;
 
   public Long getId() { return id; }
@@ -58,6 +62,14 @@ public class NewsVersionEntity {
   public void setIsGuangxiRelated(Boolean guangxiRelated) { isGuangxiRelated = guangxiRelated; }
   public String getContentHash() { return contentHash; }
   public void setContentHash(String contentHash) { this.contentHash = contentHash; }
+  public LocalDateTime getUrlVerifiedAt() { return urlVerifiedAt; }
+  public void setUrlVerifiedAt(LocalDateTime urlVerifiedAt) { this.urlVerifiedAt = urlVerifiedAt; }
+  public String getUrlStatus() { return urlStatus; }
+  public void setUrlStatus(String urlStatus) { this.urlStatus = urlStatus; }
+  public String getFinalUrl() { return finalUrl; }
+  public void setFinalUrl(String finalUrl) { this.finalUrl = finalUrl; }
+  public String getBodyText() { return bodyText; }
+  public void setBodyText(String bodyText) { this.bodyText = bodyText; }
   public LocalDateTime getCreatedAt() { return createdAt; }
   public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

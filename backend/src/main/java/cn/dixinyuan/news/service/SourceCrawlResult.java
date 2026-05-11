@@ -6,6 +6,7 @@ import java.util.List;
 public record SourceCrawlResult(
     List<CrawledArticleCandidate> candidates,
     int fetchedCount,
+    int pageCount,
     String status,
     String coverageStatus,
     String note,

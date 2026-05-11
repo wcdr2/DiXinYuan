@@ -9,6 +9,7 @@ import { getArticleRouteSegment } from "@/lib/site";
 import type {
   Article,
   ArticleCategory,
+  ArticlePage,
   CrawlLog,
   Entity,
   GraphDataset,
@@ -80,6 +81,8 @@ export interface ArticleFilters {
   region?: string;
   guangxi?: "all" | "only";
   sort?: "latest" | "oldest";
+  page?: number;
+  pageSize?: number;
 }
 
 export function filterArticles(filters: ArticleFilters): Article[] {
@@ -129,6 +132,25 @@ export function filterArticles(filters: ArticleFilters): Article[] {
   return results.sort((left, right) => right.publishedAt.localeCompare(left.publishedAt));
 }
 
+export function paginateArticles(results: Article[], page = 1, pageSize = 24): ArticlePage {
+  const safePageSize = Math.max(1, Math.min(pageSize, 60));
+  const totalElements = results.length;
+  const totalPages = totalElements === 0 ? 0 : Math.ceil(totalElements / safePageSize);
+  const requestedPage = Math.max(1, page);
+  const safePage = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages);
+  const start = (safePage - 1) * safePageSize;
+
+  return {
+    content: results.slice(start, start + safePageSize),
+    page: safePage,
+    pageSize: safePageSize,
+    totalElements,
+    totalPages,
+    hasPrevious: safePage > 1 && totalPages > 0,
+    hasNext: totalPages > 0 && safePage < totalPages,
+  };
+}
+
 export function getFeaturedArticles(): Article[] {
   return getArticles().slice(0, 3);
 }
@@ -144,7 +166,13 @@ export function getLatestArticleForSource(sourceName: string): Article | undefin
 }
 
 export function getRelatedArticles(article: Article): Article[] {
-  return getArticles()
+  return rankRelatedArticles(article, getArticles()).slice(0, 3);
+}
+
+export function rankRelatedArticles(article: Article, pool: Article[]): Article[] {
+  const baseTime = new Date(article.publishedAt).getTime();
+
+  return pool
     .filter((candidate) => candidate.id !== article.id)
     .map((candidate) => {
       const keywordScore = candidate.keywords.filter((keyword) =>
@@ -153,24 +181,39 @@ export function getRelatedArticles(article: Article): Article[] {
       const entityScore = candidate.entityIds.filter((entityId) =>
         article.entityIds.includes(entityId),
       ).length;
+      const sameCategoryScore = candidate.category === article.category ? 1.5 : 0;
+      const guangxiScore = article.isGuangxiRelated && candidate.isGuangxiRelated ? 1.2 : 0;
+      const sameLanguageScore = candidate.language === article.language ? 0.5 : 0;
+      const candidateTime = new Date(candidate.publishedAt).getTime();
+      const dayGap = Number.isFinite(baseTime) && Number.isFinite(candidateTime)
+          ? Math.abs(baseTime - candidateTime) / 86_400_000
+          : 365;
+      const timeScore = Math.max(0, 2 - dayGap / 45);
 
       return {
         article: candidate,
-        score: keywordScore * 2 + entityScore,
+        score: keywordScore * 2.4 + entityScore * 3 + sameCategoryScore + guangxiScore + sameLanguageScore + timeScore,
       };
     })
     .filter((entry) => entry.score > 0)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 3)
+    .sort((left, right) =>
+      right.score - left.score ||
+      right.article.publishedAt.localeCompare(left.article.publishedAt),
+    )
     .map((entry) => entry.article);
 }
 
 export function formatDate(locale: Locale, value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "-";
+  }
+
   const formatter = new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
     year: "numeric",
     month: "short",
     day: "2-digit",
   });
 
-  return formatter.format(new Date(value));
+  return formatter.format(date);
 }

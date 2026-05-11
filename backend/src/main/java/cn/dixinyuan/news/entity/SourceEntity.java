@@ -15,6 +15,7 @@ public class SourceEntity {
   private String siteUrl;
   private String language;
   private String trustLevel;
+  private String whitelistEntityId;
   private Boolean active;
   private String crawlRuleJson;
   private LocalDateTime createdAt;
@@ -34,6 +35,8 @@ public class SourceEntity {
   public void setLanguage(String language) { this.language = language; }
   public String getTrustLevel() { return trustLevel; }
   public void setTrustLevel(String trustLevel) { this.trustLevel = trustLevel; }
+  public String getWhitelistEntityId() { return whitelistEntityId; }
+  public void setWhitelistEntityId(String whitelistEntityId) { this.whitelistEntityId = whitelistEntityId; }
   public Boolean getActive() { return active; }
   public void setActive(Boolean active) { this.active = active; }
   public String getCrawlRuleJson() { return crawlRuleJson; }

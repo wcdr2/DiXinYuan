@@ -20,7 +20,11 @@ public class SourceQueryService {
 
   public List<SourceDto> list() {
     return sourceMapper
-        .selectList(new LambdaQueryWrapper<SourceEntity>().orderByAsc(SourceEntity::getId))
+        .selectList(new LambdaQueryWrapper<SourceEntity>()
+            .eq(SourceEntity::getActive, true)
+            .isNotNull(SourceEntity::getWhitelistEntityId)
+            .ne(SourceEntity::getWhitelistEntityId, "")
+            .orderByAsc(SourceEntity::getId))
         .stream()
         .map(source -> new SourceDto(
             source.getSourceCode(),
@@ -29,6 +33,7 @@ public class SourceQueryService {
             source.getSiteUrl(),
             source.getLanguage(),
             source.getTrustLevel(),
+            source.getWhitelistEntityId(),
             source.getActive(),
             jsonSupport.parse(source.getCrawlRuleJson())))
         .toList();

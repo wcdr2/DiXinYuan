@@ -1,40 +1,46 @@
 package cn.dixinyuan.news.service;
 
 import cn.dixinyuan.news.dto.ArticleDto;
-import cn.dixinyuan.news.entity.NewsEntity;
-import cn.dixinyuan.news.entity.NewsVersionEntity;
-import cn.dixinyuan.news.entity.SourceEntity;
+import cn.dixinyuan.news.dto.ArticlePageDto;
+import cn.dixinyuan.news.dto.ArticleRowDto;
 import cn.dixinyuan.news.mapper.NewsMapper;
-import cn.dixinyuan.news.mapper.NewsVersionMapper;
-import cn.dixinyuan.news.mapper.SourceMapper;
 import cn.dixinyuan.news.support.JsonSupport;
 import cn.dixinyuan.news.support.TimeSupport;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.util.Comparator;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class NewsQueryService {
+  private static final Map<String, String> REGION_TAGS = Map.ofEntries(
+      Map.entry("guangxi", "广西"),
+      Map.entry("nanning", "南宁"),
+      Map.entry("liuzhou", "柳州"),
+      Map.entry("guilin", "桂林"),
+      Map.entry("wuzhou", "梧州"),
+      Map.entry("beihai", "北海"),
+      Map.entry("fangchenggang", "防城港"),
+      Map.entry("qinzhou", "钦州"),
+      Map.entry("guigang", "贵港"),
+      Map.entry("yulin", "玉林"),
+      Map.entry("baise", "百色"),
+      Map.entry("hezhou", "贺州"),
+      Map.entry("hechi", "河池"),
+      Map.entry("laibin", "来宾"),
+      Map.entry("chongzuo", "崇左"));
   private final NewsMapper newsMapper;
-  private final NewsVersionMapper newsVersionMapper;
-  private final SourceMapper sourceMapper;
   private final JsonSupport jsonSupport;
+  private final LocalDateTime minimumPublishedAt;
 
   public NewsQueryService(
       NewsMapper newsMapper,
-      NewsVersionMapper newsVersionMapper,
-      SourceMapper sourceMapper,
-      JsonSupport jsonSupport) {
+      JsonSupport jsonSupport,
+      @Value("${app.news-min-published-at:2024-01-01T00:00:00}") String minimumPublishedAt) {
     this.newsMapper = newsMapper;
-    this.newsVersionMapper = newsVersionMapper;
-    this.sourceMapper = sourceMapper;
     this.jsonSupport = jsonSupport;
+    this.minimumPublishedAt = LocalDateTime.parse(minimumPublishedAt);
   }
 
   public List<ArticleDto> list(
@@ -45,19 +51,72 @@ public class NewsQueryService {
       String guangxi,
       String sort,
       int limit) {
-    List<ArticleDto> items = loadCurrentArticles();
     String normalizedQuery = normalize(query);
-    return items.stream()
-        .filter(article -> category == null || category.isBlank() || "all".equals(category) || category.equals(article.category()))
-        .filter(article -> source == null || source.isBlank() || "all".equals(source) || source.equals(article.sourceName()))
-        .filter(article -> region == null || region.isBlank() || "all".equals(region) || article.regionTags().contains(region))
-        .filter(article -> !"only".equals(guangxi) || Boolean.TRUE.equals(article.isGuangxiRelated()))
-        .filter(article -> normalizedQuery.isBlank() || searchableText(article).contains(normalizedQuery))
-        .sorted("oldest".equals(sort)
-            ? Comparator.comparing(ArticleDto::publishedAt)
-            : Comparator.comparing(ArticleDto::publishedAt).reversed())
-        .limit(Math.max(1, Math.min(limit, 500)))
+    String direction = "oldest".equals(sort) ? "ASC" : "DESC";
+    int safeLimit = Math.max(1, Math.min(limit, 2000));
+    return newsMapper.selectCurrentArticleRows(
+            normalizedQuery,
+            category,
+            source,
+            normalizeRegion(region),
+            guangxi,
+            direction,
+            safeLimit,
+            0,
+            minimumPublishedAt,
+            LocalDateTime.now().plusMinutes(1))
+        .stream()
+        .map(this::toArticle)
         .toList();
+  }
+
+  public ArticlePageDto page(
+      String query,
+      String category,
+      String source,
+      String region,
+      String guangxi,
+      String sort,
+      int page,
+      int pageSize) {
+    int requestedPage = Math.max(1, page);
+    int safePageSize = Math.max(1, Math.min(pageSize, 60));
+    String normalizedQuery = normalize(query);
+    String direction = "oldest".equals(sort) ? "ASC" : "DESC";
+    LocalDateTime maxPublishedAt = LocalDateTime.now().plusMinutes(1);
+    long total = newsMapper.countCurrentArticleRows(
+        normalizedQuery,
+        category,
+        source,
+        normalizeRegion(region),
+        guangxi,
+        minimumPublishedAt,
+        maxPublishedAt);
+    int totalPages = total == 0 ? 0 : (int) Math.ceil((double) total / safePageSize);
+    int safePage = totalPages == 0 ? 1 : Math.min(requestedPage, totalPages);
+    int offset = (safePage - 1) * safePageSize;
+    List<ArticleDto> content = newsMapper.selectCurrentArticleRows(
+            normalizedQuery,
+            category,
+            source,
+            normalizeRegion(region),
+            guangxi,
+            direction,
+            safePageSize,
+            offset,
+            minimumPublishedAt,
+            maxPublishedAt)
+        .stream()
+        .map(this::toArticle)
+        .toList();
+    return new ArticlePageDto(
+        content,
+        safePage,
+        safePageSize,
+        total,
+        totalPages,
+        safePage > 1 && totalPages > 0,
+        totalPages > 0 && safePage < totalPages);
   }
 
   public ArticleDto findBySlugOrId(String rawValue) {
@@ -65,72 +124,45 @@ public class NewsQueryService {
     if (value.isBlank()) {
       return null;
     }
-    return loadCurrentArticles().stream()
-        .filter(article ->
-            value.equals(article.id())
-                || value.equals(article.slug())
-                || value.equals(article.id() + "-" + article.slug())
-                || value.startsWith(article.id() + "-"))
-        .findFirst()
-        .orElse(null);
+    return toArticle(newsMapper.selectCurrentArticleRowBySlugOrId(
+        value,
+        minimumPublishedAt,
+        LocalDateTime.now().plusMinutes(1)));
   }
 
   public List<ArticleDto> loadCurrentArticles() {
-    List<NewsEntity> newsItems = newsMapper.selectList(
-        new LambdaQueryWrapper<NewsEntity>().isNotNull(NewsEntity::getCurrentVersionId));
-    if (newsItems.isEmpty()) {
-      return List.of();
-    }
-    Set<Long> versionIds = newsItems.stream()
-        .map(NewsEntity::getCurrentVersionId)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
-    Map<Long, NewsVersionEntity> versions = newsVersionMapper.selectBatchIds(versionIds).stream()
-        .collect(Collectors.toMap(NewsVersionEntity::getId, Function.identity()));
-    Map<Long, SourceEntity> sources = sourceMapper.selectBatchIds(
-            newsItems.stream().map(NewsEntity::getSourceId).collect(Collectors.toSet()))
-        .stream()
-        .collect(Collectors.toMap(SourceEntity::getId, Function.identity()));
-    return newsItems.stream()
-        .map(news -> toArticle(news, versions.get(news.getCurrentVersionId()), sources.get(news.getSourceId())))
-        .filter(Objects::nonNull)
-        .toList();
+    return list(null, null, null, null, null, "latest", 2000);
   }
 
-  private ArticleDto toArticle(NewsEntity news, NewsVersionEntity version, SourceEntity source) {
-    if (version == null || source == null) {
+  private ArticleDto toArticle(ArticleRowDto row) {
+    if (row == null) {
       return null;
     }
     return new ArticleDto(
-        news.getNewsCode(),
-        news.getSlug(),
-        version.getTitle(),
-        version.getSummary(),
-        version.getCoverImage(),
-        source.getName(),
-        version.getSourceUrl(),
-        version.getOriginalUrl(),
-        TimeSupport.toIsoString(version.getPublishedAt()),
-        version.getLanguage(),
-        version.getCategory(),
-        jsonSupport.parseStringList(version.getKeywordsJson()),
-        jsonSupport.parseStringList(version.getRegionTagsJson()),
-        version.getIsGuangxiRelated(),
-        jsonSupport.parseStringList(version.getEntityIdsJson()));
+        row.getId(),
+        row.getSlug(),
+        row.getTitle(),
+        row.getSummary(),
+        row.getCoverImage(),
+        row.getSourceName(),
+        row.getSourceUrl(),
+        row.getOriginalUrl(),
+        TimeSupport.toIsoString(row.getPublishedAt()),
+        row.getLanguage(),
+        row.getCategory(),
+        jsonSupport.parseStringList(row.getKeywordsJson()),
+        jsonSupport.parseStringList(row.getRegionTagsJson()),
+        row.getIsGuangxiRelated(),
+        jsonSupport.parseStringList(row.getEntityIdsJson()));
   }
 
   private static String normalize(String value) {
     return value == null ? "" : value.trim().toLowerCase();
   }
 
-  private static String searchableText(ArticleDto article) {
-    return String.join(
-            " ",
-            article.title(),
-            article.summary(),
-            article.sourceName(),
-            String.join(" ", article.keywords()),
-            String.join(" ", article.regionTags()))
-        .toLowerCase();
+  private static String normalizeRegion(String value) {
+    String normalized = normalize(value);
+    return REGION_TAGS.getOrDefault(normalized, value);
   }
+
 }

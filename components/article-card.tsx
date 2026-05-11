@@ -7,9 +7,38 @@ interface ArticleCardProps {
   article: Article;
   locale: Locale;
   variant?: "feature" | "default" | "compact";
+  highlight?: string;
 }
 
-export function ArticleCard({ article, locale, variant = "default" }: ArticleCardProps) {
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function HighlightedText({ text, query }: { text: string; query?: string }) {
+  const normalized = query?.trim();
+  if (!normalized || normalized.length < 2) {
+    return <>{text}</>;
+  }
+
+  const pattern = new RegExp(`(${escapeRegExp(normalized)})`, "ig");
+  const parts = text.split(pattern);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.toLowerCase() === normalized.toLowerCase() ? (
+          <mark key={`${part}-${index}`} className="search-highlight">
+            {part}
+          </mark>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+export function ArticleCard({ article, locale, variant = "default", highlight }: ArticleCardProps) {
   const dict = getDictionary(locale);
   const href = getArticleHref(locale, article);
   const cover = getCoverSurface(article.coverImage);
@@ -28,9 +57,13 @@ export function ArticleCard({ article, locale, variant = "default" }: ArticleCar
           {article.isGuangxiRelated ? <span className="article-flag">GX</span> : null}
         </div>
         <h3 className="article-card__title">
-          <Link href={href}>{article.title}</Link>
+          <Link href={href}>
+            <HighlightedText text={article.title} query={highlight} />
+          </Link>
         </h3>
-        <p className="article-card__summary">{article.summary}</p>
+        <p className="article-card__summary">
+          <HighlightedText text={article.summary} query={highlight} />
+        </p>
         <div className="article-card__footer">
           <span className="article-source">{article.sourceName}</span>
           <div className="article-actions">

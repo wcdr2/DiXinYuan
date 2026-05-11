@@ -29,7 +29,30 @@ app:
   import-on-startup: ${APP_IMPORT_ON_STARTUP:false}
   import-root: ${APP_IMPORT_ROOT:../datasets}
   auto-crawl-on-startup: ${APP_AUTO_CRAWL_ON_STARTUP:true}
-  crawl-first-start: ${APP_CRAWL_FIRST_START:2026-01-01T00:00:00}
+  crawl-first-start: ${APP_CRAWL_FIRST_START:2024-01-01T00:00:00}
   crawl-overlap-minutes: ${APP_CRAWL_OVERLAP_MINUTES:10}
+  crawl-parallelism: ${APP_CRAWL_PARALLELISM:20}
+  news-min-published-at: ${APP_NEWS_MIN_PUBLISHED_AT:2024-01-01T00:00:00}
   internal-token: ${CRAWL_TRIGGER_TOKEN:local-dev-token}
   frontend-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+  strict-relevance:
+    enabled: ${APP_STRICT_RELEVANCE_ENABLED:true}
+    core-keywords: >
+      地球信息科学,遥感,测绘,GIS,地理信息系统,地理信息,北斗,空天信息,
+      实景三维,时空智能,自然资源数字化,低空遥感,数字孪生,智慧城市,
+      Earth Information Science,Geoinformatics,Remote Sensing,
+      Surveying and Mapping,Geodesy,Geographic Information System,
+      Geospatial,BeiDou,BDS,Aerospace Information,Space-based Information,
+      3D Reality Modeling,Reality Mesh,Spatiotemporal Intelligence,
+      Spatial-Temporal Intelligence,Natural Resources Digitalization,
+      Low-altitude Remote Sensing,UAV Remote Sensing,Digital Twin,Smart City,
+      地理空间,地理空间智能,空间数据,时空数据,空间智能,地球观测,卫星遥感,卫星导航,
+      导航定位,高精度定位,GNSS,RTK,ArcGIS,QGIS,GeoAI,LiDAR,激光雷达,点云,
+      倾斜摄影,航空摄影,航测,无人机遥感,三维建模,三维模型,城市信息模型,CIM,
+      Earth Observation,Location Intelligence,Spatial Data,Spatiotemporal Data,
+      Geospatial Intelligence,LiDAR,Point Cloud,Photogrammetry,GNSS,RTK,ArcGIS,QGIS,GeoAI,
+      Mapping,Maps,Map,Geomatics,Cartography,Surveying,Spatial,Spatial Analysis,
+      Location Data,Location Analytics,Web GIS,Mobile GIS,OpenStreetMap,OSM
+    min-core-keyword-matches: ${APP_STRICT_RELEVANCE_MIN_MATCHES:2}
+    allow-entity-substitution: ${APP_STRICT_RELEVANCE_ALLOW_ENTITY:true}
+    use-word-boundary: ${APP_STRICT_RELEVANCE_USE_WORD_BOUNDARY:true}
